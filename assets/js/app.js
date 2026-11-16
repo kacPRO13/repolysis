@@ -766,10 +766,10 @@ function safeUrl(url) {
       <div class="style-box">
         <label for="wStyle">Describe your style</label>
         <div class="style-input">
-          <textarea id="wStyle" rows="2" maxlength="200" placeholder="e.g. neon cyberpunk banner in pink and cyan, mono font, no avatar"></textarea>
+          <textarea id="wStyle" rows="2" maxlength="200" placeholder="Anything goes: neon cyberpunk banner in pink and cyan, no avatar · cozy coffee vibe · 🔥 · only stars and forks, title &quot;My Tool&quot;"></textarea>
           <button type="button" class="btn btn-warm btn-sm" id="wStyleApply">Apply</button>
         </div>
-        <div class="style-understood" id="wUnderstood"></div>
+        <div class="style-understood" id="wUnderstood"><span class="muted">Moods, colors and shades, emoji, typos and Polish all work. Words it does not know still give you a unique look.</span></div>
         <div class="presets">${Widget.STYLE_PRESETS.map(p => `<button type="button" class="preset" data-mood="${p.toLowerCase()}">${p}</button>`).join('')}</div>
       </div>
 
@@ -897,14 +897,16 @@ function safeUrl(url) {
   }
 
   function applyStyleText(text, label) {
-    const parsed = Widget.parseStyle(text);
     const out = el.wControls.querySelector('#wUnderstood');
-    if (!parsed.understood.length) {
-      out.innerHTML = '<span class="muted">Didn\'t catch that. Try words like neon, minimal, wide, small, pastel, sunset, mono, dots, glow, or a color.</span>';
+    if (!String(text || '').trim()) {
+      out.innerHTML = '<span class="muted">Type anything: a mood, colors, a vibe, emoji, or what to show and hide.</span>';
       return;
     }
+    const parsed = Widget.parseStyle(text);
     widget.opts = Widget.applyStyle(widget.opts, parsed);
-    out.innerHTML = `<span class="muted">${label ? esc(label) : 'Understood'}:</span> ${parsed.understood.map(u => `<span class="tag t-interest">${esc(u)}</span>`).join(' ')}`;
+    const head = label ? esc(label) : parsed.generated ? 'No known style words, so I built a look from your text' : 'Applied';
+    out.innerHTML = `<span class="muted">${head}:</span> ${parsed.understood.map(u => `<span class="tag t-interest">${esc(u)}</span>`).join(' ')}`
+      + (parsed.fixes.length ? ` <span class="muted">· read as ${parsed.fixes.map(f => esc(f)).join(', ')}</span>` : '');
     syncControls();
     renderWidget();
   }
