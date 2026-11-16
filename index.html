@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Repolysis — analyze GitHub repos, discover new ones, make repo cards</title>
+  <meta name="description" content="Analyze and compare GitHub repositories with percentage breakdowns, traits and fun facts, get three repo recommendations based on your taste, or turn any repository into a customizable stats card.">
+  <meta name="theme-color" content="#16171a">
+  <meta property="og:title" content="Repolysis — repo analysis, repo picks and stat cards">
+  <meta property="og:description" content="Traits, language and contributor breakdowns, commit rhythm, repo picks based on your taste, and shareable repo cards.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-mode="compare">
+  <div class="bg" aria-hidden="true">
+    <span class="orb o1"></span>
+    <span class="orb o2"></span>
+    <span class="orb o3"></span>
+    <span class="orb o4"></span>
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+    <div class="bg-vignette"></div>
+  </div>
+
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="./" aria-label="Repolysis home">
+        <img src="assets/img/favicon.svg" alt="" width="28" height="28">
+        <span>Repo<b>lysis</b></span>
+      </a>
+      <div class="topbar-right">
+        <span class="rate" id="rate" title="Remaining GitHub API requests this hour">API —</span>
+        <button class="icon-btn" id="settingsBtn" type="button" aria-label="Settings" title="Settings (GitHub token)">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.5h4l.4-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+        </button>
+        <a class="icon-btn" id="repoLink" href="https://github.com/" target="_blank" rel="noopener" aria-label="Source code on GitHub" title="Source code">
+          <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <div class="tabs" role="tablist" aria-label="Mode">
+          <span class="tab-indicator" aria-hidden="true"></span>
+          <button type="button" class="tab" role="tab" id="tab-compare" aria-controls="panel-compare" aria-selected="true" data-mode="compare" style="--c: var(--blurple)">
+            <span class="tab-dot"></span>Analyze a repo
+          </button>
+          <button type="button" class="tab" role="tab" id="tab-discover" aria-controls="panel-discover" aria-selected="false" data-mode="discover" style="--c: var(--green)">
+            <span class="tab-dot"></span>Discover repos
+          </button>
+          <button type="button" class="tab" role="tab" id="tab-widget" aria-controls="panel-widget" aria-selected="false" data-mode="widget" style="--c: var(--fuchsia)">
+            <span class="tab-dot"></span>Repo card
+          </button>
+        </div>
+
+        <!-- Analyze a repo -->
+        <div class="hero-panel" id="panel-compare" role="tabpanel" aria-labelledby="tab-compare">
+          <h1>What makes a repo <span class="grad">tick</span>?</h1>
+          <p class="lead">Paste a repository and see what it's made of: its traits, language and contributor breakdowns, commit rhythm, health, and a pile of fun facts.</p>
+          <form id="searchForm" class="search" autocomplete="off">
+            <div class="search-field" id="searchField">
+              <input id="userInput" type="text" placeholder="https://github.com/owner/repo or owner/repo" spellcheck="false" aria-label="Repository">
+            </div>
+            <button type="submit" class="btn btn-primary" id="compareBtn">Analyze</button>
+          </form>
+          <p class="hint">
+            Try:
+            <button type="button" class="link" data-example="BurntSushi/ripgrep">BurntSushi/ripgrep</button>
+            <button type="button" class="link" data-example="excalidraw/excalidraw">excalidraw/excalidraw</button>
+            <button type="button" class="link" data-example="facebook/react">facebook/react</button>
+          </p>
+        </div>
+
+        <!-- Discover -->
+        <div class="hero-panel" id="panel-discover" role="tabpanel" aria-labelledby="tab-discover" hidden>
+          <h1>Find your next <span class="grad grad-green">favorite repo</span></h1>
+          <p class="lead">Tell us what you're into, paste repos you've liked, or both. You'll get three different picks with a reason for each.</p>
+          <form id="discoverForm" class="search search-discover" autocomplete="off">
+            <div class="search-field textarea-field">
+              <textarea id="discoverInput" rows="3" spellcheck="false" aria-label="Your interests or repos you liked"
+                placeholder="e.g. terminal UIs, rust, self-hosted tools&#10;or repos you liked: charmbracelet/bubbletea, https://github.com/sharkdp/bat"></textarea>
+            </div>
+            <button type="submit" class="btn btn-green" id="discoverBtn">Find repos</button>
+          </form>
+          <div class="detected" id="detected" aria-live="polite"></div>
+          <p class="hint">
+            Separate items with commas or new lines. Try:
+            <button type="button" class="link" data-discover="terminal ui, rust, productivity">terminal UIs in Rust</button>
+            <button type="button" class="link" data-discover="self-hosted, home automation, docker">self-hosting</button>
+            <button type="button" class="link" data-discover="excalidraw/excalidraw, tldraw/tldraw">like Excalidraw</button>
+            <button type="button" class="link" data-discover="game engine, procedural generation">gamedev</button>
+          </p>
+        </div>
+
+        <!-- Repo card -->
+        <div class="hero-panel" id="panel-widget" role="tabpanel" aria-labelledby="tab-widget" hidden>
+          <h1>Turn your repo into a <span class="grad grad-warm">stat card</span></h1>
+          <p class="lead">Paste a repository link and get a card with its most interesting numbers. Pick what's on it, match your colors, and drop it into your README or website.</p>
+          <form id="widgetForm" class="search search-widget" autocomplete="off">
+            <div class="search-field">
+              <input id="widgetInput" type="text" placeholder="https://github.com/owner/repo or owner/repo" spellcheck="false" aria-label="Repository link">
+            </div>
+            <button type="submit" class="btn btn-warm" id="widgetBtn">Generate card</button>
+          </form>
+          <p class="hint">
+            Try:
+            <button type="button" class="link" data-widget="sharkdp/bat">sharkdp/bat</button>
+            <button type="button" class="link" data-widget="excalidraw/excalidraw">excalidraw/excalidraw</button>
+            <button type="button" class="link" data-widget="charmbracelet/bubbletea">charmbracelet/bubbletea</button>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </div>
+
+    <!-- Intros -->
+<section id="intro" class="wrap intro" data-for="compare">
+      <div class="intro-card fx lift" style="--c: var(--blurple); --i: 0">
+        <span class="intro-icon">◔</span>
+        <h3>Percent breakdowns</h3>
+        <p>Languages, who writes the code, owner vs community, and when commits happen, all as donuts and charts.</p>
+      </div>
+      <div class="intro-card fx lift" style="--c: var(--green); --i: 1">
+        <span class="intro-icon">✦</span>
+        <h3>Traits &amp; personality</h3>
+        <p>Solo act or community-built? Heating up or dormant? Each repo gets badges and a one-line personality.</p>
+      </div>
+      <div class="intro-card fx lift" style="--c: var(--fuchsia); --i: 2">
+        <span class="intro-icon">?</span>
+        <h3>Fun facts</h3>
+        <p>Busiest week ever, longest quiet streak, peak commit hour, bus factor, KB per star and other oddly specific numbers.</p>
+      </div>
+    </section>
+
+        <section id="introDiscover" class="wrap intro" data-for="discover" hidden>
+      <div class="intro-card fx lift" style="--c: var(--blurple); --i: 0">
+        <span class="intro-icon">◎</span>
+        <h3>Best match</h3>
+        <p>The strongest, well-established repo that fits everything you described.</p>
+      </div>
+      <div class="intro-card fx lift" style="--c: var(--green); --i: 1">
+        <span class="intro-icon">◆</span>
+        <h3>Hidden gem</h3>
+        <p>Smaller and actively maintained. The kind of repo you won't find on the trending page.</p>
+      </div>
+      <div class="intro-card fx lift" style="--c: var(--fuchsia); --i: 2">
+        <span class="intro-icon">✦</span>
+        <h3>Wildcard</h3>
+        <p>Still on-topic, but deliberately different: another language or a fresh angle on the idea.</p>
+      </div>
+    </section>
+
+    <section id="introWidget" class="wrap intro" data-for="widget" hidden>
+      <div class="intro-card fx lift" style="--c: var(--fuchsia); --i: 0">
+        <span class="intro-icon">▦</span>
+        <h3>Pick the pieces</h3>
+        <p>Stars, commits, contributors, stars per day, bus factor, language bar, a year of commit activity and more.</p>
+      </div>
+      <div class="intro-card fx lift" style="--c: var(--orange); --i: 1">
+        <span class="intro-icon">◐</span>
+        <h3>Make it yours</h3>
+        <p>Any accent color, dark, midnight or light theme, rounded or sharp corners, and your own title.</p>
+      </div>
+      <div class="intro-card fx lift" style="--c: var(--violet); --i: 2">
+        <span class="intro-icon">⤓</span>
+        <h3>Use it anywhere</h3>
+        <p>Download SVG or PNG for your README, or embed a live version on your website with one line.</p>
+      </div>
+    </section>
+
+<!-- Analyze results -->
+    <section id="results" class="wrap results" hidden>
+      <div id="summary" class="summary"></div>
+
+      <div id="players" class="players"></div>
+
+      <div class="section-head" style="--c: var(--yellow)">
+        <h2>At a glance</h2>
+        <p>The headline numbers</p>
+      </div>
+      <div id="duel" class="glance"></div>
+
+      <div class="section-head" style="--c: var(--cyan)">
+        <h2>Breakdowns</h2>
+        <p>Percentages and shapes behind the repo</p>
+      </div>
+      <div class="charts" id="charts">
+        <article class="chart-card fx" data-reveal style="--c: var(--violet); --i: 0">
+          <header><h3>Repo profile</h3><span class="muted">100% = top-tier open source project</span></header>
+          <div class="chart-box tall"><canvas id="chartRadar"></canvas></div>
+        </article>
+        <article class="chart-card fx" data-reveal style="--c: var(--green); --i: 1">
+          <header><h3>Health checklist</h3><span class="muted" id="healthScore"></span></header>
+          <ul class="checklist" id="healthList"></ul>
+        </article>
+        <article class="chart-card fx" data-reveal style="--c: var(--yellow); --i: 0">
+          <header><h3>Language mix</h3><span class="muted">share of code by bytes</span></header>
+          <div class="donuts single" id="langDonuts"></div>
+          <div class="donut-legend" id="langLegend"></div>
+        </article>
+        <article class="chart-card fx" data-reveal style="--c: var(--fuchsia); --i: 1">
+          <header><h3>Who writes the code</h3><span class="muted">share of commits, bots excluded</span></header>
+          <div class="donuts single" id="contribDonuts"></div>
+          <div class="donut-legend" id="contribLegend"></div>
+        </article>
+        <article class="chart-card wide fx" data-reveal style="--c: var(--cyan); --i: 0">
+          <header>
+            <h3>Commit activity</h3>
+            <div class="stage-toggle" role="group" aria-label="Scale">
+              <button type="button" id="activityAbs" aria-pressed="true">Commits</button>
+              <button type="button" id="activityNorm" aria-pressed="false">% of peak</button>
+            </div>
+          </header>
+          <div class="chart-box"><canvas id="chartActivity"></canvas></div>
+        </article>
+        <article class="chart-card fx" data-reveal style="--c: var(--blurple); --i: 0">
+          <header><h3>Day of week</h3><span class="muted">% of commits</span></header>
+          <div class="chart-box"><canvas id="chartDays"></canvas></div>
+        </article>
+        <article class="chart-card fx" data-reveal style="--c: var(--red); --i: 1">
+          <header><h3>Commit clock</h3><span class="muted">% of commits by hour, UTC</span></header>
+          <div class="chart-box"><canvas id="chartHours"></canvas></div>
+        </article>
+        <article class="chart-card fx" data-reveal style="--c: var(--orange); --i: 0">
+          <header><h3>Owner vs community</h3><span class="muted">commits in the last 52 weeks</span></header>
+          <div class="donuts single" id="ownerDonuts"></div>
+          <div class="donut-legend" id="ownerLegend"></div>
+        </article>
+        <article class="chart-card fx" data-reveal style="--c: var(--cyan); --i: 1">
+          <header><h3>Weekdays vs weekend</h3><span class="muted">share of commits</span></header>
+          <div class="donuts single" id="weekendDonuts"></div>
+          <div class="donut-legend" id="weekendLegend"></div>
+        </article>
+      </div>
+
+      <div class="section-head" style="--c: var(--orange)">
+        <h2>All stats</h2>
+        <p>Every number in one place</p>
+      </div>
+      <div class="table-card fx" data-reveal style="--c: var(--orange)"><div class="table-scroll" id="scoreboard"></div></div>
+
+      <div class="section-head" style="--c: var(--fuchsia)">
+        <h2>Fun facts</h2>
+        <p>Numbers that don't necessarily fit anywhere</p>
+      </div>
+      <div class="table-card fx" data-reveal style="--c: var(--fuchsia)"><div class="table-scroll" id="facts"></div></div>
+
+      <div class="section-head" style="--c: var(--green)">
+        <h2>Top contributors</h2>
+        <p>Who carries the repo</p>
+      </div>
+      <div id="topRepos" class="top-repos"></div>
+
+      <div class="share-row">
+        <button type="button" class="btn btn-ghost" data-share>Copy link to this analysis</button>
+      </div>
+    </section>
+
+        <!-- Discover results -->
+    <section id="discoverResults" class="wrap results" hidden>
+      <div id="basedOn" class="based-on fx" style="--c: var(--green)"></div>
+      <div id="picks" class="picks"></div>
+      <div class="share-row">
+        <button type="button" class="btn btn-ghost" id="morePicks">Show 3 more</button>
+        <button type="button" class="btn btn-ghost" data-share>Copy link</button>
+      </div>
+      <p class="fine-print" id="discoverMeta"></p>
+    </section>
+
+    <!-- Repo card results -->
+    <section id="widgetResults" class="wrap results" hidden>
+      <div class="widget-layout" id="widgetLayout">
+        <div class="widget-stage fx" data-reveal style="--c: var(--fuchsia)">
+          <header>
+            <h3>Preview</h3>
+            <div class="stage-toggle" role="group" aria-label="Preview background">
+              <button type="button" data-stage="dark" aria-pressed="true">Dark page</button>
+              <button type="button" data-stage="light" aria-pressed="false">Light page</button>
+            </div>
+          </header>
+          <div class="stage" id="stage">
+            <div class="widget-preview" id="widgetPreview"></div>
+          </div>
+          <div class="export-row">
+            <button type="button" class="btn btn-warm btn-sm" id="dlSvg">Download SVG</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="dlPng">Download PNG</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-share>Copy link</button>
+          </div>
+          <div class="snippet">
+            <label>For your README</label>
+            <pre id="snipMd"></pre>
+            <button type="button" class="btn btn-ghost btn-sm copy" data-copy="snipMd">Copy</button>
+            <p>Download the SVG, commit it to your repo as <code>.github/repolysis-card.svg</code>, then paste this into README.md.</p>
+          </div>
+          <div class="snippet">
+            <label>For your website (live)</label>
+            <pre id="snipEmbed"></pre>
+            <button type="button" class="btn btn-ghost btn-sm copy" data-copy="snipEmbed">Copy</button>
+            <p>Fetches fresh numbers on every visit. GitHub READMEs don't allow iframes, so use the SVG there.</p>
+          </div>
+        </div>
+
+        <aside class="widget-controls fx" data-reveal style="--c: var(--orange); --i: 1" id="widgetControls" aria-label="Customize card"></aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <p>Data comes from the public GitHub API and is fetched directly in your browser. Nothing is sent to any other server.</p>
+      <p class="muted">Repolysis is not affiliated with GitHub, Inc. or Discord Inc.</p>
+    </div>
+  </footer>
+
+  <dialog id="settings" class="dialog">
+    <form method="dialog" class="dialog-body" id="settingsForm">
+      <h2>GitHub token <span class="muted">(optional)</span></h2>
+      <p>Without a token GitHub allows <b>60 requests per hour</b> and <b>10 searches per minute</b>, enough for a few analyses. A token raises that to <b>5,000 requests per hour</b> and 30 searches per minute.</p>
+      <p>Create a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a> <b>with no extra permissions</b> (public repository access is enough). It stays in this browser only (localStorage) and is sent exclusively to api.github.com.</p>
+      <label class="field">
+        <span>Token</span>
+        <input type="password" id="tokenInput" placeholder="github_pat_…" spellcheck="false" autocomplete="off">
+      </label>
+      <p class="muted" id="tokenState"></p>
+      <div class="cache-row">
+        <div>
+          <b>Saved data</b>
+          <p class="muted" id="cacheState"></p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="cacheClear">Clear</button>
+      </div>
+      <p class="muted" id="proxyState"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" id="tokenClear">Remove token</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-ghost" id="settingsClose">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="tokenSave" value="save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/analyze.js"></script>
+  <script src="assets/js/charts.js"></script>
+  <script src="assets/js/discover.js"></script>
+  <script src="assets/js/widget.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

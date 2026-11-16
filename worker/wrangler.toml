@@ -1,0 +1,11 @@
+name = "repolysis-proxy"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+# Which websites may use this proxy (comma-separated). Replace with your GitHub Pages URL.
+# Keep localhost if you test the site locally.
+ALLOWED_ORIGINS = "https://YOUR-USERNAME.github.io,http://localhost:8080"
+
+# The GitHub token is a secret, NOT a var. Set it with:
+#   npx wrangler secret put GITHUB_TOKEN
