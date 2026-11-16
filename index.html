@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Repolysis — analyze GitHub repos, discover new ones, make repo cards</title>
-  <meta name="description" content="Analyze and compare GitHub repositories with percentage breakdowns, traits and fun facts, get three repo recommendations based on your taste, or turn any repository into a customizable stats card.">
+  <meta name="description" content="Analyze any GitHub repository with percentage breakdowns, traits and fun facts, get three repo recommendations based on your taste, or turn any repository into a customizable stats card.">
   <meta name="theme-color" content="#16171a">
   <meta property="og:title" content="Repolysis — repo analysis, repo picks and stat cards">
   <meta property="og:description" content="Traits, language and contributor breakdowns, commit rhythm, repo picks based on your taste, and shareable repo cards.">
@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body data-mode="compare">
+<body data-mode="analyze">
   <div class="bg" aria-hidden="true">
     <span class="orb o1"></span>
     <span class="orb o2"></span>
@@ -48,7 +48,7 @@
       <div class="wrap">
         <div class="tabs" role="tablist" aria-label="Mode">
           <span class="tab-indicator" aria-hidden="true"></span>
-          <button type="button" class="tab" role="tab" id="tab-compare" aria-controls="panel-compare" aria-selected="true" data-mode="compare" style="--c: var(--blurple)">
+          <button type="button" class="tab" role="tab" id="tab-analyze" aria-controls="panel-analyze" aria-selected="true" data-mode="analyze" style="--c: var(--blurple)">
             <span class="tab-dot"></span>Analyze a repo
           </button>
           <button type="button" class="tab" role="tab" id="tab-discover" aria-controls="panel-discover" aria-selected="false" data-mode="discover" style="--c: var(--green)">
@@ -60,14 +60,14 @@
         </div>
 
         <!-- Analyze a repo -->
-        <div class="hero-panel" id="panel-compare" role="tabpanel" aria-labelledby="tab-compare">
+        <div class="hero-panel" id="panel-analyze" role="tabpanel" aria-labelledby="tab-analyze">
           <h1>What makes a repo <span class="grad">tick</span>?</h1>
           <p class="lead">Paste a repository and see what it's made of: its traits, language and contributor breakdowns, commit rhythm, health, and a pile of fun facts.</p>
           <form id="searchForm" class="search" autocomplete="off">
             <div class="search-field" id="searchField">
               <input id="userInput" type="text" placeholder="https://github.com/owner/repo or owner/repo" spellcheck="false" aria-label="Repository">
             </div>
-            <button type="submit" class="btn btn-primary" id="compareBtn">Analyze</button>
+            <button type="submit" class="btn btn-primary" id="analyzeBtn">Analyze</button>
           </form>
           <p class="hint">
             Try:
@@ -123,7 +123,7 @@
     </div>
 
     <!-- Intros -->
-<section id="intro" class="wrap intro" data-for="compare">
+<section id="intro" class="wrap intro" data-for="analyze">
       <div class="intro-card fx lift" style="--c: var(--blurple); --i: 0">
         <span class="intro-icon">◔</span>
         <h3>Percent breakdowns</h3>
@@ -181,13 +181,13 @@
     <section id="results" class="wrap results" hidden>
       <div id="summary" class="summary"></div>
 
-      <div id="players" class="players"></div>
+      <div id="repoCard" class="repo-hero-wrap"></div>
 
       <div class="section-head" style="--c: var(--yellow)">
         <h2>At a glance</h2>
         <p>The headline numbers</p>
       </div>
-      <div id="duel" class="glance"></div>
+      <div id="glance" class="glance"></div>
 
       <div class="section-head" style="--c: var(--cyan)">
         <h2>Breakdowns</h2>
@@ -246,7 +246,7 @@
         <h2>All stats</h2>
         <p>Every number in one place</p>
       </div>
-      <div class="table-card fx" data-reveal style="--c: var(--orange)"><div class="table-scroll" id="scoreboard"></div></div>
+      <div class="table-card fx" data-reveal style="--c: var(--orange)"><div class="table-scroll" id="allStats"></div></div>
 
       <div class="section-head" style="--c: var(--fuchsia)">
         <h2>Fun facts</h2>
@@ -258,7 +258,7 @@
         <h2>Top contributors</h2>
         <p>Who carries the repo</p>
       </div>
-      <div id="topRepos" class="top-repos"></div>
+      <div id="contributors" class="top-repos"></div>
 
       <div class="share-row">
         <button type="button" class="btn btn-ghost" data-share>Copy link to this analysis</button>

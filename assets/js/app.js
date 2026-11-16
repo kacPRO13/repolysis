@@ -52,20 +52,20 @@ function safeUrl(url) {
 
 /* ---------- app ---------- */
 (() => {
-  const COLORS = ['#5865F2', '#57F287', '#EB459E', '#FEE75C', '#00A8FC'];
+  const ACCENT = '#5865F2'; // main colour of the analysis report
 
   const $ = sel => document.querySelector(sel);
   const el = {
     tabs: document.querySelectorAll('.tab'),
-    panelCompare: $('#panel-compare'), panelDiscover: $('#panel-discover'), panelWidget: $('#panel-widget'),
+    panelAnalyze: $('#panel-analyze'), panelDiscover: $('#panel-discover'), panelWidget: $('#panel-widget'),
     tabIndicator: $('.tab-indicator'), introWidget: $('#introWidget'),
     wForm: $('#widgetForm'), wInput: $('#widgetInput'), wBtn: $('#widgetBtn'), wResults: $('#widgetResults'), wLayout: $('#widgetLayout'),
     wPreview: $('#widgetPreview'), wControls: $('#widgetControls'), stage: $('#stage'), snipMd: $('#snipMd'), snipEmbed: $('#snipEmbed'),
     dlSvg: $('#dlSvg'), dlPng: $('#dlPng'),
-    form: $('#searchForm'), field: $('#searchField'), chips: $('#chips'), input: $('#userInput'), btn: $('#compareBtn'),
+    form: $('#searchForm'), field: $('#searchField'), input: $('#userInput'), btn: $('#analyzeBtn'),
     status: $('#status'), intro: $('#intro'), introDiscover: $('#introDiscover'),
-    results: $('#results'), summary: $('#summary'), players: $('#players'),
-    duel: $('#duel'), scoreboard: $('#scoreboard'), facts: $('#facts'), topRepos: $('#topRepos'),
+    results: $('#results'), summary: $('#summary'), repoCard: $('#repoCard'),
+    glance: $('#glance'), allStats: $('#allStats'), facts: $('#facts'), contributors: $('#contributors'),
     hoursSource: $('#hoursSource'), rate: $('#rate'),
     dForm: $('#discoverForm'), dInput: $('#discoverInput'), dBtn: $('#discoverBtn'), detected: $('#detected'),
     dResults: $('#discoverResults'), basedOn: $('#basedOn'), picks: $('#picks'), morePicks: $('#morePicks'), dMeta: $('#discoverMeta'),
@@ -145,10 +145,10 @@ function safeUrl(url) {
     requestAnimationFrame(() => node.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' }));
   }
 
-  let mode = 'compare';
-  let logins = [];
+  let mode = 'analyze';
+  let repoName = '';
   let running = false;
-  let compareRendered = false;
+  let analysisRendered = false;
   let discover = null; // { pool, shown:Set, text }
   let widget = null;   // { card, images, opts, repo }
 
@@ -170,13 +170,13 @@ function safeUrl(url) {
     mode = next;
     document.body.dataset.mode = mode;
     el.tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.mode === mode)));
-    el.panelCompare.hidden = mode !== 'compare';
+    el.panelAnalyze.hidden = mode !== 'analyze';
     el.panelDiscover.hidden = mode !== 'discover';
     el.panelWidget.hidden = mode !== 'widget';
-    el.results.hidden = !(mode === 'compare' && compareRendered);
+    el.results.hidden = !(mode === 'analyze' && analysisRendered);
     el.dResults.hidden = !(mode === 'discover' && discover);
     el.wResults.hidden = !(mode === 'widget' && widget);
-    el.intro.hidden = !(mode === 'compare' && !compareRendered);
+    el.intro.hidden = !(mode === 'analyze' && !analysisRendered);
     el.introDiscover.hidden = !(mode === 'discover' && !discover);
     el.introWidget.hidden = !(mode === 'widget' && !widget);
     moveIndicator();
@@ -185,13 +185,13 @@ function safeUrl(url) {
   }
   el.tabs.forEach(t => t.addEventListener('click', () => {
     setMode(t.dataset.mode);
-    ({ compare: el.input, discover: el.dInput, widget: el.wInput })[mode].focus({ preventScroll: true });
+    ({ analyze: el.input, discover: el.dInput, widget: el.wInput })[mode].focus({ preventScroll: true });
   }));
 
   function updateUrl() {
     const url = new URL(location.href);
     url.search = '';
-    if (mode === 'compare' && logins.length) url.searchParams.set('r', logins[0]);
+    if (mode === 'analyze' && repoName) url.searchParams.set('r', repoName);
     if (mode === 'discover') {
       url.searchParams.set('mode', 'discover');
       if (discover && discover.text) url.searchParams.set('q', discover.text);
@@ -222,7 +222,7 @@ function safeUrl(url) {
   function setRepo(text) {
     const full = normalise(text);
     if (!REPO_RE.test(full)) return false;
-    logins = [full];
+    repoName = full;
     el.input.value = full;
     return true;
   }
@@ -234,12 +234,12 @@ function safeUrl(url) {
       el.input.focus();
       return;
     }
-    runCompare();
+    runAnalysis();
   });
 
   document.querySelectorAll('[data-example]').forEach(b => b.addEventListener('click', () => {
     setRepo(b.dataset.example);
-    runCompare();
+    runAnalysis();
   }));
 
   /* ---------- rate limit badge ---------- */
@@ -273,69 +273,47 @@ function safeUrl(url) {
   }
 
   /* =========================================================
-     Analyze repos: running
+     Analyze a repo: running
      ========================================================= */
-  async function runCompare() {
-    if (running) return;
+  async function runAnalysis() {
+    if (running || !repoName) return;
     setBusy(el.btn, true, 'Analyze');
-    const current = [...logins];
+    const full = repoName;
     updateUrl();
 
-    el.status.innerHTML = `<div class="loading-list">${current.map((l, i) =>
-      `<span class="loading-item" id="load-${i}"><span class="spinner"></span>${esc(l)}</span>`).join('')}</div>`;
+    el.status.innerHTML = `<div class="loading-list"><span class="loading-item"><span class="spinner"></span>Reading ${esc(full)}…</span></div>`;
 
-    const results = await Promise.allSettled(current.map((full, i) =>
-      GH.fetchRepoAnalysis(full).then(a => {
-        const item = document.getElementById(`load-${i}`);
-        if (item) { item.className = 'loading-item done'; item.innerHTML = `✓ ${esc(a.repo.full)}`; }
-        return a;
-      }, err => {
-        const item = document.getElementById(`load-${i}`);
-        if (item) { item.className = 'loading-item fail'; item.innerHTML = `✕ ${esc(full)}`; }
-        throw err;
-      })));
-
-    const players = [];
-    const errors = [];
-    results.forEach((r, i) => {
-      if (r.status === 'fulfilled') {
-        try {
-          players.push({ s: RepoStats.compute(r.value), color: COLORS[players.length] });
-        } catch (err) {
-          console.error(err);
-          errors.push({ login: current[i], err: new Error("Couldn't process the data.") });
-        }
-      } else {
-        errors.push({ login: current[i], err: r.reason });
-      }
-    });
+    let report = null;
+    let error = null;
+    try {
+      report = RepoStats.compute(await GH.fetchRepoAnalysis(full));
+    } catch (err) {
+      if (!(err instanceof GH.ApiError)) console.error(err);
+      error = err instanceof GH.ApiError ? err : new Error("Couldn't process the data.");
+    }
 
     setBusy(el.btn, false, 'Analyze');
 
-    if (players.length) {
-      players.forEach(p => {
-        const idx = logins.findIndex(l => l.toLowerCase() === p.s.full.toLowerCase());
-        if (idx >= 0) logins[idx] = p.s.full;
-      });
-      updateUrl();
-      compareRendered = true;
-      if (mode === 'compare') setMode('compare', { updateUrl: false });
-      const pending = players.some(p => !p.s.weeks || !p.s.hoursPct);
-      el.status.innerHTML = renderErrors(errors) + (pending
-        ? '<div class="notice warn"><div><b>GitHub is still computing some statistics</b> (commit activity or the commit clock). Click Analyze again in a few seconds to fill in the missing charts.</div></div>'
-        : '');
-      renderCompare(players);
-      if (!errors.length && !pending) setTimeout(() => { if (!running) el.status.innerHTML = ''; }, 1200);
-    } else {
-      el.status.innerHTML = renderErrors(errors);
+    if (!report) {
+      el.status.innerHTML = renderError(full, error);
+      return;
     }
+
+    repoName = report.full; // GitHub's spelling of the name
+    el.input.value = repoName;
+    updateUrl();
+    analysisRendered = true;
+    if (mode === 'analyze') setMode('analyze', { updateUrl: false });
+    const pending = !report.weeks || !report.hoursPct;
+    el.status.innerHTML = pending
+      ? '<div class="notice warn"><div><b>GitHub is still computing some statistics</b> (commit activity or the commit clock). Click Analyze again in a few seconds to fill in the missing charts.</div></div>'
+      : '';
+    renderAnalysis(report);
   }
 
-  function renderErrors(errors) {
-    if (!errors.length) return '';
-    const rate = errors.find(e => e.err && e.err.rateLimited);
-    if (rate) return rateNotice(rate.err, 'core');
-    return errors.map(e => `<div class="notice error"><div><b>${esc(e.login)}:</b> ${esc(e.err && e.err.message || 'Unknown error')}</div></div>`).join('');
+  function renderError(full, err) {
+    if (err && err.rateLimited) return rateNotice(err, 'core');
+    return `<div class="notice error"><div><b>${esc(full)}:</b> ${esc(err && err.message || 'Unknown error')}</div></div>`;
   }
 
   document.addEventListener('click', e => {
@@ -343,7 +321,7 @@ function safeUrl(url) {
   });
 
   /* =========================================================
-     Analyze repos: rendering
+     Analyze a repo: rendering
      ========================================================= */
   function avatar(url, size = 64) {
     const sep = url.includes('?') ? '&' : '?';
@@ -352,48 +330,39 @@ function safeUrl(url) {
   const repoAvatar = (s, size) => avatar(s.r.avatar, size);
   const signedPct = v => `${v >= 0 ? '+' : '−'}${Math.round(Math.abs(v) * 100)}%`;
 
-  const METRICS = [
-    { label: 'Repolysis score', hint: 'Log-scaled mix of popularity, community, activity, health and age', get: s => s.score, fmt: Fmt.int, best: 'max', sub: s => `grade ${s.grade}` },
-    { label: 'Stars', get: s => s.r.stars, fmt: Fmt.int, best: 'max' },
-    { label: 'Forks', get: s => s.r.forks, fmt: Fmt.int, best: 'max' },
-    { label: 'Watchers', get: s => s.r.watchers, fmt: Fmt.int, best: 'max' },
-    { label: 'Contributors', get: s => s.contributorCount, fmt: v => (v >= 100 ? '100+' : Fmt.int(v)), best: 'max', sub: s => (s.a.contributorsMore ? 'GitHub lists the first 100' : '') },
-    { label: 'Total commits', get: s => s.a.commits, fmt: Fmt.int, best: 'max' },
-    { label: 'Commits, last 12 months', get: s => s.yearCommits, fmt: Fmt.int, best: 'max' },
-    { label: 'Weeks with commits', hint: 'Share of the last 52 weeks with at least one commit', get: s => s.activeWeeks, fmt: Fmt.pct, best: 'max' },
-    { label: 'Momentum', hint: 'Last quarter vs the quarter before', get: s => s.momentum, fmt: signedPct, best: 'max' },
-    { label: 'Stars per day', hint: 'Average since creation', get: s => s.velocity, fmt: Fmt.dec, best: 'max' },
-    { label: 'Health', hint: '8 upkeep checks: description, license, topics, website, releases, recent push, not archived, discussions/wiki', get: s => s.healthScore, fmt: Fmt.pct, best: 'max' },
-    { label: 'Bus factor', hint: 'People who together wrote half of all commits', get: s => s.busFactor, fmt: Fmt.int, best: 'max' },
-    { label: 'Last push', get: s => s.pushedDays, fmt: Fmt.ago, best: 'min' },
-    { label: 'Latest release', get: s => s.releaseDays, fmt: Fmt.ago, best: 'min', sub: s => (s.a.release ? s.a.release.tag : '') },
-    { label: 'Open issues per 1k stars', hint: 'Lower usually means a tidier tracker', get: s => s.issuesPer1k, fmt: Fmt.dec, best: 'min' },
-    { label: 'Age', get: s => s.ageYears, fmt: Fmt.age, best: null, sub: s => `since ${Fmt.month(s.r.created)}` },
-    { label: 'Forks per 100 stars', get: s => s.forkRate * 100, fmt: Fmt.dec, best: null },
-    { label: 'Owner share of commits', hint: 'Last 52 weeks', get: s => s.ownerShare, fmt: Fmt.pct, best: null },
-    { label: 'Repo size', get: s => s.r.size / 1024, fmt: Fmt.mb, best: null },
+  const STATS = [
+    { label: 'Repolysis score', hint: 'Log-scaled mix of popularity, community, activity, health and age', get: s => s.score, fmt: Fmt.int, sub: s => `grade ${s.grade}` },
+    { label: 'Stars', get: s => s.r.stars, fmt: Fmt.int },
+    { label: 'Forks', get: s => s.r.forks, fmt: Fmt.int },
+    { label: 'Watchers', get: s => s.r.watchers, fmt: Fmt.int },
+    { label: 'Contributors', get: s => s.contributorCount, fmt: v => (v >= 100 ? '100+' : Fmt.int(v)), sub: s => (s.a.contributorsMore ? 'GitHub lists the first 100' : '') },
+    { label: 'Total commits', get: s => s.a.commits, fmt: Fmt.int },
+    { label: 'Commits, last 12 months', get: s => s.yearCommits, fmt: Fmt.int },
+    { label: 'Weeks with commits', hint: 'Share of the last 52 weeks with at least one commit', get: s => s.activeWeeks, fmt: Fmt.pct },
+    { label: 'Momentum', hint: 'Last quarter vs the quarter before', get: s => s.momentum, fmt: signedPct },
+    { label: 'Stars per day', hint: 'Average since creation', get: s => s.velocity, fmt: Fmt.dec },
+    { label: 'Health', hint: '8 upkeep checks: description, license, topics, website, releases, recent push, not archived, discussions/wiki', get: s => s.healthScore, fmt: Fmt.pct },
+    { label: 'Bus factor', hint: 'People who together wrote half of all commits', get: s => s.busFactor, fmt: Fmt.int },
+    { label: 'Last push', get: s => s.pushedDays, fmt: Fmt.ago },
+    { label: 'Latest release', get: s => s.releaseDays, fmt: Fmt.ago, sub: s => (s.a.release ? s.a.release.tag : '') },
+    { label: 'Open issues per 1k stars', hint: 'Lower usually means a tidier tracker', get: s => s.issuesPer1k, fmt: Fmt.dec },
+    { label: 'Age', get: s => s.ageYears, fmt: Fmt.age, sub: s => `since ${Fmt.month(s.r.created)}` },
+    { label: 'Forks per 100 stars', get: s => s.forkRate * 100, fmt: Fmt.dec },
+    { label: 'Owner share of commits', hint: 'Last 52 weeks', get: s => s.ownerShare, fmt: Fmt.pct },
+    { label: 'Repo size', get: s => s.r.size / 1024, fmt: Fmt.mb },
   ];
 
-  function winners(metric, players) {
-    if (!metric.best || players.length < 2) return new Set();
-    const vals = players.map(p => metric.get(p.s)).map(v => (v === null || v === undefined || Number.isNaN(v) ? null : v));
-    const valid = vals.filter(v => v !== null);
-    if (valid.length < 2) return new Set();
-    const target = metric.best === 'max' ? Math.max(...valid) : Math.min(...valid);
-    if (valid.every(v => v === target)) return new Set();
-    return new Set(vals.map((v, i) => (v === target ? i : -1)).filter(i => i >= 0));
-  }
-
-  function renderCompare(players) {
-    renderSummary(players);
-    renderPlayers(players);
-    renderDuel(players);
-    renderScoreboard(players);
-    renderFacts(players);
-    renderTopRepos(players);
+  function renderAnalysis(s) {
+    renderSummary(s);
+    renderRepoCard(s);
+    renderGlance(s);
+    renderHealth(s);
+    renderAllStats(s);
+    renderFacts(s);
+    renderContributors(s);
 
     reveal(el.results);
-    whenVisible(document.getElementById('charts'), () => Charts.renderAll(players));
+    whenVisible(document.getElementById('charts'), () => Charts.renderAll([{ s, color: ACCENT }]));
     scrollToNode(el.results);
   }
 
@@ -405,72 +374,43 @@ function safeUrl(url) {
     Charts.rerenderActivity(norm);
   }
 
-  function renderSummary(players) {
+  function renderSummary(s) {
     el.summary.setAttribute('data-reveal', '');
-    if (players.length >= 1) {
-      const s = players[0].s;
-      el.summary.style.setProperty('--c', players[0].color);
-      el.summary.innerHTML = `
-        <img src="${repoAvatar(s, 52)}" alt="">
-        <div class="s-text">
-          <div class="s-title">${esc(s.full)}: ${esc(s.personality.name)}</div>
-          <div class="s-sub">Grade ${s.grade} · ${esc(s.personality.desc)} ${s.traits.length} ${Fmt.plural(s.traits.length, 'trait', 'traits')} found · Repolysis score ${Fmt.int(s.score)} pts</div>
-        </div>`;
-      return;
-    }
-    const metrics = METRICS.filter(m => m.best);
-    const wins = players.map(() => 0);
-    let contested = 0;
-    for (const m of metrics) {
-      const w = winners(m, players);
-      if (w.size) contested++;
-      w.forEach(i => wins[i]++);
-    }
-    const order = players.map((p, i) => i).sort((a, b) => wins[b] - wins[a] || players[b].s.score - players[a].s.score);
-    const lead = order[0];
-    const tie = wins[order[0]] === wins[order[1]];
-    const L = players[lead];
-    el.summary.style.setProperty('--c', L.color);
+    el.summary.style.setProperty('--c', ACCENT);
     el.summary.innerHTML = `
-      <img src="${repoAvatar(L.s, 52)}" alt="">
+      <img src="${repoAvatar(s, 52)}" alt="">
       <div class="s-text">
-        <div class="s-title">${tie ? `Tied on categories, ${esc(L.s.full)} leads on score` : `${esc(L.s.full)} wins`}</div>
-        <div class="s-sub">${tie
-          ? `Same number of category wins; the Repolysis score breaks the tie (${Fmt.int(L.s.score)} pts, grade ${L.s.grade}).`
-          : `${wins[lead]} of ${contested} decided categories. Repolysis score ${Fmt.int(L.s.score)} pts, grade ${L.s.grade}.`}</div>
-      </div>
-      <div class="s-wins">${order.map(i => `
-        <span class="win-pill" style="--c:${players[i].color};--t:${i}"><i></i>${esc(players[i].s.r.name)} <b>${wins[i]}</b></span>`).join('')}
+        <div class="s-title">${esc(s.full)}: ${esc(s.personality.name)}</div>
+        <div class="s-sub">Grade ${s.grade} · ${esc(s.personality.desc)} ${s.traits.length} ${Fmt.plural(s.traits.length, 'trait', 'traits')} found · Repolysis score ${Fmt.int(s.score)} pts</div>
       </div>`;
   }
 
-  function renderPlayers(players) {
-    el.players.innerHTML = players.map(({ s, color }, idx) => {
-      const r = s.r;
-      const meta = [
-        r.lang && `<span><i class="lang-dot" style="background:${Charts.langColor(r.lang, 0)}"></i>${esc(r.lang)}</span>`,
-        r.license && r.license !== 'NOASSERTION' && `<span>⚖ ${esc(r.license)}</span>`,
-        `<span>📅 ${Fmt.month(r.created)}</span>`,
-      ].filter(Boolean).join('');
-      const shown = s.traits.slice(0, 6);
-      const extra = s.traits.length - shown.length;
-      return `
-      <article class="player fx lift" data-reveal style="--c:${color};--i:${idx}">
+  function renderRepoCard(s) {
+    const r = s.r;
+    const meta = [
+      r.lang && `<span><i class="lang-dot" style="background:${Charts.langColor(r.lang, 0)}"></i>${esc(r.lang)}</span>`,
+      r.license && r.license !== 'NOASSERTION' && `<span>⚖ ${esc(r.license)}</span>`,
+      `<span>📅 ${Fmt.month(r.created)}</span>`,
+    ].filter(Boolean).join('');
+    const shown = s.traits.slice(0, 6);
+    const extra = s.traits.length - shown.length;
+    el.repoCard.innerHTML = `
+      <article class="repo-hero fx lift" data-reveal style="--c:${ACCENT}">
         <div class="p-head">
           <div class="p-avatar">
             <img src="${repoAvatar(s)}" alt="" loading="lazy" class="${r.ownerType === 'Organization' ? 'org' : ''}">
-            <span class="p-level" title="Grade">${s.grade}</span>
+            <span class="p-grade" title="Grade">${s.grade}</span>
           </div>
           <div class="p-names">
             <div class="p-name" title="${esc(r.full)}">${esc(r.name)}</div>
             <a class="p-login" href="${safeUrl(r.url)}" target="_blank" rel="noopener">${esc(r.owner)}</a>
-            <div><span class="p-class" title="${esc(s.personality.desc)}">${esc(s.personality.name)}</span></div>
+            <div><span class="p-persona" title="${esc(s.personality.desc)}">${esc(s.personality.name)}</span></div>
           </div>
         </div>
         <p class="p-bio">${r.desc ? esc(r.desc) : '<span class="muted">No description.</span>'}</p>
         <div class="p-meta">${meta}</div>
-        <div class="p-xp">
-          <div class="p-xp-row"><span>Health ${Math.round(s.healthScore * 8)}/8</span><b data-count="${s.score}" data-fmt="int" data-suffix=" pts">${Fmt.int(s.score)} pts</b></div>
+        <div class="p-health">
+          <div class="p-health-row"><span>Health ${Math.round(s.healthScore * 8)}/8</span><b data-count="${s.score}" data-fmt="int" data-suffix=" pts">${Fmt.int(s.score)} pts</b></div>
           <div class="bar"><span style="width:${Math.max(3, Math.round(s.healthScore * 100))}%"></span></div>
         </div>
         <div class="p-stats">
@@ -483,12 +423,10 @@ function safeUrl(url) {
           `<span class="badge" style="--t:${t}" title="${esc(b.desc)}"><span class="ico">${b.ico}</span>${esc(b.name)}</span>`).join('')}
           ${extra > 0 ? `<span class="badge" title="${esc(s.traits.slice(6).map(b => b.name).join(', '))}">+${extra}</span>` : ''}</div>` : ''}
       </article>`;
-    }).join('');
   }
 
-  /** "At a glance" tiles for the analyzed repo. */
-  function renderDuel(players) {
-    const { s } = players[0];
+  /** "At a glance" tiles. */
+  function renderGlance(s) {
     const more = s.a.contributorsMore;
     const tiles = [
       { label: 'Stars', value: s.r.stars, c: '#FEE75C', sub: `${Fmt.dec(s.velocity)} per day on average` },
@@ -500,7 +438,7 @@ function safeUrl(url) {
       { label: 'Open issues', value: s.r.issues, c: '#ED4245', sub: `${Fmt.dec(s.issuesPer1k)} per 1k stars` },
       { label: 'Age', text: Fmt.age(s.ageYears), c: '#F0B232', sub: `last push ${Fmt.ago(s.pushedDays)}` },
     ];
-    el.duel.innerHTML = tiles.map((t, i) => {
+    el.glance.innerHTML = tiles.map((t, i) => {
       const known = t.text !== undefined || (t.value !== null && t.value !== undefined);
       const val = t.text !== undefined ? esc(t.text)
         : known ? `<span data-count="${t.value}"${t.suffix ? ` data-suffix="${t.suffix}"` : ''}>${Fmt.compact(t.value)}${t.suffix || ''}</span>` : '—';
@@ -511,34 +449,31 @@ function safeUrl(url) {
         ${t.sub ? `<span class="g-sub">${esc(t.sub)}</span>` : ''}
       </article>`;
     }).join('');
+  }
 
-    // Health checklist lives with the charts but needs no chart library.
-    const list = document.getElementById('healthList');
+  /** Health checklist: lives with the charts but needs no chart library. */
+  function renderHealth(s) {
     const passed = s.health.filter(h => h[1]).length;
     document.getElementById('healthScore').textContent = `${passed} of ${s.health.length} passed`;
-    list.innerHTML = s.health.map(([label, ok], i) => `
+    document.getElementById('healthList').innerHTML = s.health.map(([label, ok], i) => `
       <li class="${ok ? 'ok' : 'no'}" style="--t:${i}"><span class="mark" aria-hidden="true">${ok ? '✓' : '✕'}</span>${esc(label)}</li>`).join('')
       + `<li class="score" style="--t:${s.health.length}"><div class="bar"><span style="width:${Math.round(s.healthScore * 100)}%"></span></div><b>${Math.round(s.healthScore * 100)}%</b></li>`;
   }
 
-  function tableHead(players, first) {
-    return `<thead><tr><th>${first}</th>${players.map(p => `
-      <th style="--pc:${p.color}"><span class="th-user"><img src="${repoAvatar(p.s, 22)}" alt="">${esc(p.s.full)}</span></th>`).join('')}</tr></thead>`;
+  function tableHead(s, first) {
+    return `<thead><tr><th>${first}</th><th style="--pc:${ACCENT}"><span class="th-user"><img src="${repoAvatar(s, 22)}" alt="">${esc(s.full)}</span></th></tr></thead>`;
   }
 
-  function renderScoreboard(players) {
-    const rows = METRICS.map((m, ri) => {
-      const w = winners(m, players);
-      const cells = players.map((p, i) => {
-        const v = m.get(p.s);
-        if (v === null || v === undefined || Number.isNaN(v)) return '<td class="na">—</td>';
-        const subText = m.sub ? m.sub(p.s) : '';
-        const sub = subText ? `<span class="sub">${esc(subText)}</span>` : '';
-        return `<td class="num ${w.has(i) ? 'win' : ''}">${esc(m.fmt(v))}${w.has(i) ? ' <span class="crown">♛</span>' : ''}${sub}</td>`;
-      }).join('');
-      return `<tr style="--r:${ri}"><th scope="row">${esc(m.label)}${m.hint ? `<small>${esc(m.hint)}</small>` : ''}</th>${cells}</tr>`;
+  function renderAllStats(s) {
+    const rows = STATS.map((m, ri) => {
+      const v = m.get(s);
+      const subText = m.sub ? m.sub(s) : '';
+      const cell = v === null || v === undefined || Number.isNaN(v)
+        ? '<td class="na">—</td>'
+        : `<td class="num">${esc(m.fmt(v))}${subText ? `<span class="sub">${esc(subText)}</span>` : ''}</td>`;
+      return `<tr style="--r:${ri}"><th scope="row">${esc(m.label)}${m.hint ? `<small>${esc(m.hint)}</small>` : ''}</th>${cell}</tr>`;
     }).join('');
-    el.scoreboard.innerHTML = `<table class="grid">${tableHead(players, 'Category')}<tbody>${rows}</tbody></table>`;
+    el.allStats.innerHTML = `<table class="grid">${tableHead(s, 'Stat')}<tbody>${rows}</tbody></table>`;
   }
 
   const fmtDate = t => Fmt.date(t);
@@ -572,23 +507,21 @@ function safeUrl(url) {
     { label: 'Emoji in description', render: s => [Fmt.int(s.emojiInDesc), s.emojiInDesc ? 'expressive' : 'all business'] },
   ];
 
-  function renderFacts(players) {
+  function renderFacts(s) {
     const rows = FACTS.map((f, ri) => {
-      const vals = players.map(p => { try { return f.render(p.s) || null; } catch { return null; } });
-      if (vals.every(v => !v)) return '';
-      return `<tr style="--r:${ri}"><th scope="row">${esc(f.label)}${f.hint ? `<small>${esc(f.hint)}</small>` : ''}</th>${vals.map(v => v
-        ? `<td>${esc(v[0])}${v[1] ? `<span class="sub">${esc(v[1])}</span>` : ''}</td>`
-        : '<td class="na">—</td>').join('')}</tr>`;
+      let v = null;
+      try { v = f.render(s) || null; } catch { v = null; }
+      if (!v) return '';
+      return `<tr style="--r:${ri}"><th scope="row">${esc(f.label)}${f.hint ? `<small>${esc(f.hint)}</small>` : ''}</th><td>${esc(v[0])}${v[1] ? `<span class="sub">${esc(v[1])}</span>` : ''}</td></tr>`;
     }).join('');
-    el.facts.innerHTML = `<table class="grid">${tableHead(players, 'Fun fact')}<tbody>${rows}</tbody></table>`;
+    el.facts.innerHTML = `<table class="grid">${tableHead(s, 'Fun fact')}<tbody>${rows}</tbody></table>`;
   }
 
-  /** Top contributors per repo with their share of commits. */
-  function renderTopRepos(players) {
-    el.topRepos.innerHTML = players.map(({ s, color }, idx) => {
-      const total = s.humans.reduce((a, c) => a + c.contributions, 0) || 1;
-      return `
-      <article class="repo-col fx" data-reveal style="--c:${color};--i:${idx}">
+  /** Top 10 contributors with their share of commits. */
+  function renderContributors(s) {
+    const total = s.humans.reduce((a, c) => a + c.contributions, 0) || 1;
+    el.contributors.innerHTML = `
+      <article class="repo-col fx" data-reveal style="--c:${ACCENT}">
         <h3><img src="${repoAvatar(s, 22)}" alt="">${esc(s.full)}</h3>
         ${s.humans.length ? s.humans.slice(0, 10).map(c => `
           <a class="repo contrib-row" href="https://github.com/${encodeURIComponent(c.login)}" target="_blank" rel="noopener">
@@ -600,7 +533,6 @@ function safeUrl(url) {
             <span class="repo-meta">${Fmt.pct(c.contributions / total)}</span>
           </a>`).join('') : '<p class="muted">No contributor data.</p>'}
       </article>`;
-    }).join('');
   }
 
   /* =========================================================
@@ -1157,7 +1089,7 @@ function safeUrl(url) {
     const t = el.tokenInput.value.trim();
     GH.setToken(t);
     toast(t ? 'Token saved.' : 'Token removed.');
-    if (mode === 'compare' && logins.length) runCompare();
+    if (mode === 'analyze' && repoName) runAnalysis();
   });
 
   /* ---------- toast ---------- */
@@ -1203,8 +1135,8 @@ function safeUrl(url) {
       runDiscover(q);
     }
   } else {
-    setMode('compare', { updateUrl: false });
+    setMode('analyze', { updateUrl: false });
     const u = params.get('r');
-    if (u && setRepo(u.split(',')[0])) runCompare();
+    if (u && setRepo(u.split(',')[0])) runAnalysis();
   }
 })();
