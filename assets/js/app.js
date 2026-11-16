@@ -760,17 +760,19 @@ function safeUrl(url) {
     const toggles = group => Widget.ELEMENTS.filter(e => e.group === group).map(e => `
       <label class="toggle" style="--t:${t++}"><input type="checkbox" data-el="${e.key}">${esc(e.label)}</label>`).join('');
     const chips = (list, attr) => list.map(x => `<button type="button" class="chip-btn" data-${attr}="${x.key}">${esc(x.label)}</button>`).join('');
+    // Segmented switch for one of Widget.CHOICES
+    const seg = name => `<div class="segmented">${Widget.CHOICES[name].map(([v, label]) => `<button type="button" data-set="${name}" data-val="${v}">${esc(label)}</button>`).join('')}</div>`;
+    const range = (id, name, min, max, step, label) => `
+      <span>${label} <output id="${id}Out"></output></span>
+      <input type="range" class="range" id="${id}" data-range="${name}" min="${min}" max="${max}" step="${step}" aria-label="${label}">`;
+    const opt = (name, label) => `<label class="toggle"><input type="checkbox" data-opt="${name}">${esc(label)}</label>`;
+
     el.wControls.innerHTML = `
       <h3>Customize</h3>
 
-      <div class="style-box">
-        <label for="wStyle">Describe your style</label>
-        <div class="style-input">
-          <textarea id="wStyle" rows="2" maxlength="200" placeholder="Anything goes: neon cyberpunk banner in pink and cyan, no avatar · cozy coffee vibe · 🔥 · only stars and forks, title &quot;My Tool&quot;"></textarea>
-          <button type="button" class="btn btn-warm btn-sm" id="wStyleApply">Apply</button>
-        </div>
-        <div class="style-understood" id="wUnderstood"><span class="muted">Moods, colors and shades, emoji, typos and Polish all work. Words it does not know still give you a unique look.</span></div>
-        <div class="presets">${Widget.STYLE_PRESETS.map(p => `<button type="button" class="preset" data-mood="${p.toLowerCase()}">${p}</button>`).join('')}</div>
+      <div class="ctl-group">
+        <span>Presets <span class="muted">one click, keeps your elements</span></span>
+        <div class="presets">${Widget.PRESETS.map(p => `<button type="button" class="preset" data-preset-look="${p.key}" style="--pa:${p.o.accent || 'var(--blurple)'}">${esc(p.label)}</button>`).join('')}</div>
       </div>
 
       <details class="ctl-section" open>
@@ -785,13 +787,7 @@ function safeUrl(url) {
       </details>
 
       <details class="ctl-section" open>
-        <summary>Look</summary>
-        <div class="ctl-group"><span>Background</span><div class="chip-row">${chips(Widget.BACKGROUNDS, 'bg')}</div></div>
-        <div class="ctl-group">
-          <span>Light <output id="wGlowOut"></output></span>
-          <div class="chip-row">${chips(Widget.LIGHTS, 'light')}</div>
-          <input type="range" class="range" id="wGlow" min="0" max="100" step="5" aria-label="Light strength">
-        </div>
+        <summary>Colors</summary>
         <div class="ctl-group">
           <span>Accent</span>
           <div class="swatches">
@@ -811,21 +807,55 @@ function safeUrl(url) {
             <label class="color-pick"><input type="color" id="wBg2" aria-label="Background color 2"><span>Background 2</span></label>
           </div>
         </div>
+      </details>
+
+      <details class="ctl-section" open>
+        <summary>Background &amp; light</summary>
+        <div class="ctl-group"><span>Background</span><div class="chip-row">${chips(Widget.BACKGROUNDS, 'bg')}</div></div>
+        <div class="ctl-group">${range('wPattern', 'pattern', 0, 100, 5, 'Pattern strength')}</div>
+        <div class="ctl-group"><span>Gradient direction</span>${seg('bgDir')}</div>
+        <div class="ctl-group">
+          <span>Light</span>
+          <div class="chip-row">${chips(Widget.LIGHTS, 'light')}</div>
+        </div>
+        <div class="ctl-group">${range('wGlow', 'glow', 0, 100, 5, 'Light strength')}</div>
+      </details>
+
+      <details class="ctl-section" open>
+        <summary>Shape &amp; border</summary>
+        <div class="ctl-group">${range('wRadius', 'radius', 0, 28, 1, 'Corner radius')}</div>
+        <div class="ctl-group"><span>Border</span>${seg('border')}</div>
+        <div class="ctl-group"><span>Avatar shape</span>${seg('avatarShape')}</div>
+        <div class="ctl-group"><div class="toggles">${opt('strip', 'Accent strip on top')}</div></div>
+      </details>
+
+      <details class="ctl-section" open>
+        <summary>Text</summary>
         <div class="ctl-group">
           <span>Font</span>
           <div class="segmented">${Object.entries(Widget.FONTS).map(([k, f]) => `<button type="button" data-font="${k}">${f.label}</button>`).join('')}</div>
         </div>
         <div class="ctl-group">
-          <span>Shape</span>
-          <div class="toggles">
-            <label class="toggle"><input type="checkbox" data-opt="rounded">Rounded corners</label>
-            <label class="toggle"><input type="checkbox" data-opt="border">Border</label>
-          </div>
-        </div>
-        <div class="ctl-group">
           <span>Title <span class="muted">optional</span></span>
           <input class="text-input" id="wTitle" maxlength="60" placeholder="${esc(widget.card.repo.name)}" value="${esc(o.title)}">
         </div>
+        <div class="ctl-group"><span>Description</span>${seg('descLines')}</div>
+        <div class="ctl-group"><span>Numbers</span>${seg('numbers')}</div>
+      </details>
+
+      <details class="ctl-section" open>
+        <summary>Stats &amp; charts</summary>
+        <div class="ctl-group"><span>Stat tiles</span>${seg('tiles')}</div>
+        <div class="ctl-group"><span>Columns</span>${seg('cols')}</div>
+        <div class="ctl-group"><div class="toggles">${opt('icons', 'Icons in tiles')}</div></div>
+        <div class="ctl-group"><span>Activity chart</span>${seg('chart')}</div>
+        <div class="ctl-group"><span>Languages</span>${seg('langStyle')}</div>
+      </details>
+
+      <details class="ctl-section" open>
+        <summary>Animation</summary>
+        <div class="ctl-group">${seg('anim')}</div>
+        <p class="ctl-note">Plays in the SVG on GitHub and on websites. The PNG is always a still image.</p>
       </details>
 
       <details class="ctl-section" open>
@@ -835,7 +865,7 @@ function safeUrl(url) {
           <span>Stats <span><button type="button" data-preset="all">all</button> · <button type="button" data-preset="none">none</button></span></span>
           <div class="toggles">${toggles('Stats')}</div>
         </div>
-        <div class="ctl-group"><span>Sections</span><div class="toggles">${toggles('Sections')}</div></div>
+        <div class="ctl-group"><span>Sections</span><div class="toggles">${toggles('Sections')}${opt('brand', 'Repolysis credit')}</div></div>
       </details>
 
       <div class="ctl-group"><button type="button" class="btn btn-ghost btn-sm" id="wReset" style="width:100%">Reset to defaults</button></div>`;
@@ -847,6 +877,7 @@ function safeUrl(url) {
     const o = widget.opts;
     const q = s => el.wControls.querySelector(s);
     const qa = s => el.wControls.querySelectorAll(s);
+    const press = (sel, test) => qa(sel).forEach(b => b.setAttribute('aria-pressed', String(test(b))));
     const support = Widget.TEMPLATE_SUPPORT[o.template];
     qa('[data-el]').forEach(i => {
       const key = i.dataset.el;
@@ -861,18 +892,28 @@ function safeUrl(url) {
       i.checked = !!o[i.dataset.opt];
       i.parentElement.classList.toggle('on', i.checked);
     });
-    qa('[data-template]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.template === o.template)));
+    press('[data-template]', b => b.dataset.template === o.template);
     q('#wTplNote').textContent = {
       badge: 'Badge shows the name, the first 3 selected stats and the grade.',
       minimal: 'Minimal shows stats as text instead of boxes.',
       wide: 'Banner fits up to 6 stats, with activity and languages on the right.',
       compact: 'Compact fits up to 6 stats.',
     }[o.template] || '';
-    qa('[data-bg]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.bg === o.bg)));
-    qa('[data-light]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.light === o.light)));
-    q('#wGlow').value = o.glow;
-    q('#wGlow').disabled = o.light === 'none';
-    q('#wGlowOut').textContent = o.light === 'none' ? '' : `${o.glow}%`;
+    press('[data-bg]', b => b.dataset.bg === o.bg);
+    press('[data-light]', b => b.dataset.light === o.light);
+    press('[data-set]', b => String(o[b.dataset.set]) === b.dataset.val);
+    press('[data-font]', b => b.dataset.font === o.font);
+
+    // Sliders
+    const slider = (id, value, text, off) => {
+      q(`#${id}`).value = value;
+      q(`#${id}`).disabled = !!off;
+      q(`#${id}Out`).textContent = off ? '' : text;
+    };
+    slider('wGlow', o.glow, `${o.glow}%`, o.light === 'none');
+    slider('wPattern', o.pattern, `${o.pattern}%`, o.bg === 'solid' || o.bg === 'gradient');
+    slider('wRadius', o.radius, `${o.radius}px`);
+
     let preset = false;
     qa('[data-accent]').forEach(b => {
       const on = b.dataset.accent.toLowerCase() === o.accent.toLowerCase();
@@ -889,26 +930,10 @@ function safeUrl(url) {
     q('#wAccent2Label').textContent = o.accent2 ? a2.toUpperCase() : `Auto · ${a2.toUpperCase()}`;
     q('#wAccent2Auto').hidden = !o.accent2;
     const themeKey = o.bgColors ? 'custom' : o.theme;
-    qa('[data-theme]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.theme === themeKey)));
+    press('[data-theme]', b => b.dataset.theme === themeKey);
     q('#wBgRow').hidden = !o.bgColors;
     if (o.bgColors) { q('#wBg1').value = o.bgColors[0]; q('#wBg2').value = o.bgColors[1]; }
-    qa('[data-font]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.font === o.font)));
     el.wResults.style.setProperty('--accent', o.accent);
-  }
-
-  function applyStyleText(text, label) {
-    const out = el.wControls.querySelector('#wUnderstood');
-    if (!String(text || '').trim()) {
-      out.innerHTML = '<span class="muted">Type anything: a mood, colors, a vibe, emoji, or what to show and hide.</span>';
-      return;
-    }
-    const parsed = Widget.parseStyle(text);
-    widget.opts = Widget.applyStyle(widget.opts, parsed);
-    const head = label ? esc(label) : parsed.generated ? 'No known style words, so I built a look from your text' : 'Applied';
-    out.innerHTML = `<span class="muted">${head}:</span> ${parsed.understood.map(u => `<span class="tag t-interest">${esc(u)}</span>`).join(' ')}`
-      + (parsed.fixes.length ? ` <span class="muted">· read as ${parsed.fixes.map(f => esc(f)).join(', ')}</span>` : '');
-    syncControls();
-    renderWidget();
   }
 
   el.wControls.addEventListener('change', e => {
@@ -933,9 +958,9 @@ function safeUrl(url) {
     if (!widget) return;
     const id = e.target.id;
     const o = widget.opts;
-    if (id === 'wColor') { o.accent = e.target.value; liveRender(); }
+    if (e.target.dataset.range) { o[e.target.dataset.range] = Number(e.target.value); liveRender(); }
+    else if (id === 'wColor') { o.accent = e.target.value; liveRender(); }
     else if (id === 'wAccent2') { o.accent2 = e.target.value; liveRender(); }
-    else if (id === 'wGlow') { o.glow = Number(e.target.value); liveRender(); }
     else if (id === 'wBg1' || id === 'wBg2') {
       const cur = o.bgColors || ['#1e1f22', '#2b2d31'];
       o.bgColors = id === 'wBg1' ? [e.target.value, cur[1]] : [cur[0], e.target.value];
@@ -947,22 +972,15 @@ function safeUrl(url) {
     }
   });
 
-  el.wControls.addEventListener('keydown', e => {
-    if (e.target.id === 'wStyle' && e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      applyStyleText(e.target.value);
-    }
-  });
-
   el.wControls.addEventListener('click', e => {
     if (!widget) return;
     const b = e.target.closest('button');
     if (!b) return;
     const o = widget.opts;
     const ds = b.dataset;
-    if (b.id === 'wStyleApply') { applyStyleText(el.wControls.querySelector('#wStyle').value); return; }
-    if (ds.mood) { applyStyleText(ds.mood, `${b.textContent} preset`); return; }
-    if (ds.accent) o.accent = ds.accent;
+    if (ds.presetLook) widget.opts = Widget.applyPreset(o, ds.presetLook);
+    else if (ds.set) o[ds.set] = ds.val;
+    else if (ds.accent) o.accent = ds.accent;
     else if (ds.template) o.template = ds.template;
     else if (ds.bg) o.bg = ds.bg;
     else if (ds.light) o.light = ds.light;
@@ -977,7 +995,6 @@ function safeUrl(url) {
     } else if (b.id === 'wReset') {
       widget.opts = Widget.defaultOptions();
       el.wControls.querySelector('#wTitle').value = '';
-      el.wControls.querySelector('#wUnderstood').innerHTML = '';
     } else return;
     syncControls();
     renderWidget();
@@ -996,7 +1013,9 @@ function safeUrl(url) {
   });
   el.dlPng.addEventListener('click', () => {
     if (!widget) return;
-    Widget.downloadPng(widget.svg, widget.size.width, widget.size.height, cardFileName())
+    // PNG is a still image: render without animation so nothing is caught mid-way.
+    const still = Widget.render(widget.card, { ...widget.opts, anim: 'none' }, widget.images);
+    Widget.downloadPng(still.svg, still.width, still.height, cardFileName())
       .then(() => toast('PNG downloaded.'))
       .catch(() => toast("PNG export failed in this browser. Try the SVG."));
   });

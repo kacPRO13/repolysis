@@ -6,7 +6,7 @@ Repolysis has three modes:
 
 - **Analyze a repo.** Paste one repository and see its traits, percentage breakdowns (languages, who writes the code, owner vs community, weekdays vs weekend, when commits happen), health checklist, all stats and a pile of fun facts.
 - **Discover repos.** Describe what you're into, paste repos you've liked, or both. You get three *different* recommendations (best match, hidden gem, wildcard), each with a reason it was picked.
-- **Repo card.** Paste a repository link and get a stats card in five templates, with any colors, backgrounds and lighting, or just describe the style you want in words.
+- **Repo card.** Paste a repository link and get a stats card in five templates, 16 one-click presets and dozens of style switches: colors, themes, backgrounds, lights, borders, fonts, tile and chart styles, even animation.
 
 Discord-inspired dark theme. Everything runs in the browser, with no backend and no build step.
 
@@ -60,9 +60,17 @@ Paste `owner/repo` or a GitHub link and Repolysis builds an SVG card from the re
 
 **Templates:** Classic (520 px), Compact (380 px), Banner (860 px wide rectangle), Minimal (text first, no boxes) and Badge (a tiny pill for READMEs).
 
-**Look:** 7 backgrounds (gradient, solid, mesh, aurora, grid, dots, stripes), 6 lights (corner glow, top light, side light, spotlight, neon edge, none) with a strength slider, accent and second color, Dark / Midnight / Light or fully custom background colors, Sans / Mono / Serif font, rounded or sharp corners, border and a custom title. Every change re-renders instantly without new API requests.
+**Presets:** 16 one-click looks (Cyberpunk, Synthwave, Terminal, Ocean, Sunset, Forest, Galaxy, Luxury, Pastel, Paper, Blueprint, Slate Pro, Arcade, Neon Pulse, Honeycomb, Orbit). A preset changes only the look; your template, elements and title stay.
 
-**Describe your style:** type anything and the card always changes. Examples: *"neon cyberpunk banner in pink and cyan, mono font, no avatar"*, *"cozy coffee vibe"*, *"ciemnoniebieski, kropki, bez opisu"*, *"🔥"*, *"only stars and forks, title “My Tool”"*. It understands 60+ moods (cyberpunk, synthwave, halloween, winter, coffee, gothic, royal, pixel, vaporwave…), templates, themes, backgrounds, lights, fonts, color names with shades ("dark blue", "jasnoróżowy") or hex codes, emoji, a glow strength ("glow 40"), a title in quotes, and elements ("no X", "show X", "only X", "everything", "fewer", "reset", "random"). English and Polish both work, small typos are fixed ("neno" → neon), and text with no known words is turned into a unique look (same words, same look). Presets are one click away.
+**Colors:** 15 accent swatches plus any custom color, an automatic or custom second color, 7 themes (Dark, Midnight, OLED, Slate, Plum, Light, Cream) or your own two background colors.
+
+**Background & light:** 12 backgrounds (gradient, solid, mesh, aurora, grid, dots, stripes, waves, hexagons, stars, rings, grain) with a pattern-strength slider and gradient direction (diagonal, vertical, horizontal, radial); 9 lights (corner, top, bottom, side, two corners, center, spotlight, neon edge, none) with a strength slider.
+
+**Shape & text:** corner radius slider, border (subtle, accent, gradient, none), avatar shape, accent strip, 5 fonts (Sans, Mono, Serif, Rounded, Condensed), custom title, description length (1–3 lines) and number format (12.3k or 12,345).
+
+**Stats & charts:** stat tiles (filled, outline, tinted, plain), column count, icons in tiles, activity chart (area, line, bars, dots), languages (bar, thick bar, pills).
+
+**Animation:** shimmer, pulsing light or a chart that draws itself. It plays in the SVG on GitHub and websites; the PNG is always a still.
 
 Ways to use it:
 

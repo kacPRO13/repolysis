@@ -7,8 +7,8 @@
    - BACKGROUNDS surface patterns (gradient, mesh, aurora, grid…)
    - LIGHTS      lighting (corner glow, spotlight, neon edge…)
    - ELEMENTS    toggleable content
-   - parseStyle  turns a free-text description ("neon cyberpunk, wide")
-                 into options
+   - PRESETS     one-click looks
+   - CHOICES     small style switches (tiles, chart, borders, animation…)
    ============================================================ */
 'use strict';
 
@@ -20,24 +20,37 @@ const Widget = (() => {
     sans: { label: 'Sans', family: "'Segoe UI', Inter, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" },
     mono: { label: 'Mono', family: "'JetBrains Mono', 'Cascadia Code', Consolas, 'SF Mono', Menlo, monospace" },
     serif: { label: 'Serif', family: "Georgia, Cambria, 'Times New Roman', serif" },
+    rounded: { label: 'Rounded', family: "'Nunito', 'Varela Round', ui-rounded, 'Arial Rounded MT Bold', 'Segoe UI', sans-serif" },
+    condensed: { label: 'Condensed', family: "'Roboto Condensed', 'Arial Narrow', 'Segoe UI', Arial, sans-serif" },
   };
   const MONO = FONTS.mono.family;
 
   const THEMES = {
     dark:     { label: 'Dark',     bg1: '#1e1f22', bg2: '#2b2d31', text: '#f2f3f5', muted: '#949ba4', tile: '#ffffff', tileOp: 0.035, tileStroke: '#ffffff', tileStrokeOp: 0.07, border: '#ffffff', borderOp: 0.1, track: '#ffffff', trackOp: 0.08, glowOp: 0.22, isLight: false },
     midnight: { label: 'Midnight', bg1: '#090b18', bg2: '#171b3a', text: '#e8eaff', muted: '#8b91bd', tile: '#8c96ff', tileOp: 0.06,  tileStroke: '#8c96ff', tileStrokeOp: 0.14, border: '#8c96ff', borderOp: 0.22, track: '#8c96ff', trackOp: 0.14, glowOp: 0.3, isLight: false },
+    oled:     { label: 'OLED',     bg1: '#000000', bg2: '#0b0b0d', text: '#f5f5f5', muted: '#8a8a8f', tile: '#ffffff', tileOp: 0.04,  tileStroke: '#ffffff', tileStrokeOp: 0.09, border: '#ffffff', borderOp: 0.12, track: '#ffffff', trackOp: 0.09, glowOp: 0.26, isLight: false },
+    slate:    { label: 'Slate',    bg1: '#0f172a', bg2: '#1e293b', text: '#e2e8f0', muted: '#94a3b8', tile: '#94a3b8', tileOp: 0.07,  tileStroke: '#94a3b8', tileStrokeOp: 0.14, border: '#94a3b8', borderOp: 0.2,  track: '#94a3b8', trackOp: 0.14, glowOp: 0.26, isLight: false },
+    plum:     { label: 'Plum',     bg1: '#1a0f1f', bg2: '#2d1736', text: '#f6e9ff', muted: '#b39bc2', tile: '#e0b3ff', tileOp: 0.06,  tileStroke: '#e0b3ff', tileStrokeOp: 0.14, border: '#e0b3ff', borderOp: 0.22, track: '#e0b3ff', trackOp: 0.14, glowOp: 0.3, isLight: false },
     light:    { label: 'Light',    bg1: '#ffffff', bg2: '#f2f3f5', text: '#1e1f22', muted: '#5c5e66', tile: '#1e1f22', tileOp: 0.035, tileStroke: '#1e1f22', tileStrokeOp: 0.08, border: '#1e1f22', borderOp: 0.12, track: '#1e1f22', trackOp: 0.08, glowOp: 0.14, isLight: true },
+    cream:    { label: 'Cream',    bg1: '#fbf7ef', bg2: '#f1e8d6', text: '#2b2118', muted: '#7a6a58', tile: '#2b2118', tileOp: 0.04,  tileStroke: '#2b2118', tileStrokeOp: 0.1,  border: '#2b2118', borderOp: 0.14, track: '#2b2118', trackOp: 0.08, glowOp: 0.14, isLight: true },
   };
 
   const ACCENTS = [
     { name: 'Blurple', hex: '#5865F2' },
-    { name: 'Green', hex: '#57F287' },
+    { name: 'Indigo', hex: '#6366F1' },
+    { name: 'Violet', hex: '#9B84EE' },
     { name: 'Fuchsia', hex: '#EB459E' },
-    { name: 'Yellow', hex: '#FEE75C' },
-    { name: 'Cyan', hex: '#00A8FC' },
+    { name: 'Rose', hex: '#F43F5E' },
     { name: 'Red', hex: '#ED4245' },
     { name: 'Orange', hex: '#F0B232' },
-    { name: 'Violet', hex: '#9B84EE' },
+    { name: 'Gold', hex: '#E9B949' },
+    { name: 'Yellow', hex: '#FEE75C' },
+    { name: 'Lime', hex: '#A3E635' },
+    { name: 'Green', hex: '#57F287' },
+    { name: 'Teal', hex: '#14B8A6' },
+    { name: 'Cyan', hex: '#00A8FC' },
+    { name: 'Sky', hex: '#38BDF8' },
+    { name: 'White', hex: '#F2F3F5' },
   ];
 
   const TEMPLATES = [
@@ -56,16 +69,40 @@ const Widget = (() => {
     { key: 'grid',     label: 'Grid' },
     { key: 'dots',     label: 'Dots' },
     { key: 'stripes',  label: 'Stripes' },
+    { key: 'waves',    label: 'Waves' },
+    { key: 'hex',      label: 'Hexagons' },
+    { key: 'stars',    label: 'Stars' },
+    { key: 'rings',    label: 'Rings' },
+    { key: 'noise',    label: 'Grain' },
   ];
 
   const LIGHTS = [
     { key: 'corner',    label: 'Corner glow' },
     { key: 'top',       label: 'Top light' },
+    { key: 'bottom',    label: 'Bottom light' },
     { key: 'left',      label: 'Side light' },
+    { key: 'dual',      label: 'Two corners' },
+    { key: 'center',    label: 'Center glow' },
     { key: 'spotlight', label: 'Spotlight' },
     { key: 'neon',      label: 'Neon edge' },
     { key: 'none',      label: 'None' },
   ];
+
+  // Small style switches. The first value of each is the default.
+  const CHOICES = {
+    bgDir:       [['diagonal', 'Diagonal'], ['vertical', 'Vertical'], ['horizontal', 'Horizontal'], ['radial', 'Radial']],
+    border:      [['subtle', 'Subtle'], ['accent', 'Accent'], ['gradient', 'Gradient'], ['none', 'None']],
+    tiles:       [['filled', 'Filled'], ['outline', 'Outline'], ['accent', 'Tinted'], ['plain', 'Plain']],
+    cols:        [['auto', 'Auto'], ['2', '2'], ['3', '3'], ['4', '4']],
+    chart:       [['area', 'Area'], ['line', 'Line'], ['bars', 'Bars'], ['dots', 'Dots']],
+    langStyle:   [['bar', 'Bar'], ['thick', 'Thick bar'], ['pills', 'Pills']],
+    avatarShape: [['auto', 'Auto'], ['circle', 'Circle'], ['rounded', 'Rounded'], ['square', 'Square']],
+    descLines:   [['auto', 'Auto'], ['1', '1 line'], ['2', '2 lines'], ['3', '3 lines']],
+    numbers:     [['compact', '12.3k'], ['full', '12,345']],
+    anim:        [['none', 'None'], ['shimmer', 'Shimmer'], ['pulse', 'Pulse'], ['draw', 'Draw chart']],
+  };
+  // URL parameter name for each choice.
+  const CHOICE_PARAM = { bgDir: 'dir', border: 'border', tiles: 'tiles', cols: 'cols', chart: 'chart', langStyle: 'langs', avatarShape: 'avatar', descLines: 'desc', numbers: 'numbers', anim: 'anim' };
 
   // Everything the person can toggle. Order = order on the card.
   const ELEMENTS = [
@@ -106,21 +143,26 @@ const Widget = (() => {
   };
 
   function defaultOptions() {
-    return {
+    const o = {
       show: new Set(ELEMENTS.filter(e => e.def).map(e => e.key)),
       template: 'classic',
       accent: ACCENTS[0].hex,
       accent2: '',          // '' = derived from accent
       theme: 'dark',
       bg: 'gradient',
+      pattern: 50,          // background pattern strength 0–100
       light: 'corner',
       glow: 60,             // 0–100
       bgColors: null,       // [c1, c2] overrides the theme background
       font: 'sans',
-      rounded: true,
-      border: true,
+      radius: 16,           // corner radius in px
+      strip: true,          // accent strip along the top edge
+      icons: false,         // icons inside stat tiles
+      brand: true,          // "Repolysis" credit in the footer
       title: '',
     };
+    for (const [k, list] of Object.entries(CHOICES)) o[k] = list[0][0];
+    return o;
   }
 
   /* ---------- options <-> URL ---------- */
@@ -135,16 +177,24 @@ const Widget = (() => {
     if (o.accent2) params.set('accent2', o.accent2.replace('#', ''));
     if (o.theme !== def.theme) params.set('theme', o.theme);
     if (o.bg !== def.bg) params.set('bg', o.bg);
+    if (o.pattern !== def.pattern) params.set('pat', String(o.pattern));
     if (o.light !== def.light) params.set('light', o.light);
     if (o.glow !== def.glow) params.set('glow', String(o.glow));
     if (o.bgColors) params.set('bgc', o.bgColors.map(c => c.replace('#', '')).join('-'));
     if (o.font !== def.font) params.set('font', o.font);
-    if (!o.rounded) params.set('square', '1');
-    if (!o.border) params.set('noborder', '1');
+    if (o.radius !== def.radius) params.set('radius', String(o.radius));
+    if (!o.strip) params.set('nostrip', '1');
+    if (o.icons) params.set('icons', '1');
+    if (!o.brand) params.set('nobrand', '1');
+    for (const k of Object.keys(CHOICES)) if (o[k] !== def[k]) params.set(CHOICE_PARAM[k], o[k]);
     if (o.title) params.set('title', o.title);
   }
   function optionsFromParams(params) {
     const o = defaultOptions();
+    const num = (name, min, max) => {
+      const v = Number(params.get(name));
+      return params.has(name) && Number.isFinite(v) && v >= min && v <= max ? v : null;
+    };
     const show = params.get('show');
     if (show) o.show = new Set(show === 'none' ? [] : show.split(',').filter(k => ELEMENTS.some(e => e.key === k)));
     if (TEMPLATES.some(t => t.key === params.get('tpl'))) o.template = params.get('tpl');
@@ -152,14 +202,22 @@ const Widget = (() => {
     if (hex6.test(params.get('accent2') || '')) o.accent2 = `#${params.get('accent2')}`;
     if (THEMES[params.get('theme')]) o.theme = params.get('theme');
     if (BACKGROUNDS.some(b => b.key === params.get('bg'))) o.bg = params.get('bg');
+    if (num('pat', 0, 100) !== null) o.pattern = num('pat', 0, 100);
     if (LIGHTS.some(l => l.key === params.get('light'))) o.light = params.get('light');
-    const glow = Number(params.get('glow'));
-    if (params.has('glow') && glow >= 0 && glow <= 100) o.glow = glow;
+    if (num('glow', 0, 100) !== null) o.glow = num('glow', 0, 100);
     const bgc = (params.get('bgc') || '').split('-');
     if (bgc.length === 2 && bgc.every(c => hex6.test(c))) o.bgColors = bgc.map(c => `#${c}`);
     if (FONTS[params.get('font')]) o.font = params.get('font');
-    if (params.get('square') === '1') o.rounded = false;
-    if (params.get('noborder') === '1') o.border = false;
+    if (params.get('square') === '1') o.radius = 4;          // older links
+    if (num('radius', 0, 28) !== null) o.radius = num('radius', 0, 28);
+    if (params.get('noborder') === '1') o.border = 'none';  // older links
+    if (params.get('nostrip') === '1') o.strip = false;
+    if (params.get('icons') === '1') o.icons = true;
+    if (params.get('nobrand') === '1') o.brand = false;
+    for (const [k, list] of Object.entries(CHOICES)) {
+      const v = params.get(CHOICE_PARAM[k]);
+      if (list.some(([key]) => key === v)) o[k] = v;
+    }
     if (params.get('title')) o.title = params.get('title').slice(0, 60);
     return o;
   }
@@ -222,7 +280,8 @@ const Widget = (() => {
   /* ---------- derived stats ---------- */
   const nf = new Intl.NumberFormat('en-US');
   const cf = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
-  const num = v => (v >= 10000 ? cf.format(v) : nf.format(v));
+  let fullNumbers = false; // set by render() from options.numbers
+  const num = v => (!fullNumbers && v >= 10000 ? cf.format(v) : nf.format(v));
   const short = v => (v >= 1000 ? cf.format(v) : nf.format(v));
   function ago(ts) {
     const d = (Date.now() - new Date(ts).getTime()) / DAY;
@@ -397,9 +456,19 @@ const Widget = (() => {
     return P;
   }
 
+  /** Corner radius for an avatar of size s, following the avatar shape option. */
+  function avatarRx(P, s, square) {
+    switch (P.o.avatarShape) {
+      case 'circle': return s / 2;
+      case 'rounded': return s * 0.24;
+      case 'square': return s * 0.06;
+      default: return square ? s * 0.22 : s / 2;
+    }
+  }
+
   function drawAvatar(P, x, y, s, url, ring, square) {
     const id = P.uid('av');
-    const rx = square ? s * 0.22 : s / 2;
+    const rx = avatarRx(P, s, square);
     P.defs.push(`<clipPath id="${id}"><rect x="${x}" y="${y}" width="${s}" height="${s}" rx="${rx}"/></clipPath>`);
     if (ring) P.parts.push(`<rect x="${x - 2}" y="${y - 2}" width="${s + 4}" height="${s + 4}" rx="${rx + 2}" fill="${ring}"/>`);
     P.parts.push(`<image href="${P.img(url)}" xlink:href="${P.img(url)}" x="${x}" y="${y}" width="${s}" height="${s}" clip-path="url(#${id})" preserveAspectRatio="xMidYMid slice"/>`);
@@ -457,6 +526,7 @@ const Widget = (() => {
   function drawDesc(P, x, y, w, sizePx, lines) {
     const r = P.d.r;
     if (!P.show('description') || !r.desc) return y;
+    if (P.o.descLines !== 'auto') lines = Number(P.o.descLines) || lines;
     const ls = wrap(r.desc, w, sizePx, lines, P.F);
     ls.forEach((l, i) => P.text(x, y + sizePx + i * sizePx * 1.42, l, { size: sizePx, fill: P.t.muted }));
     return y + ls.length * sizePx * 1.42 + 12;
@@ -469,17 +539,27 @@ const Widget = (() => {
 
   function drawTiles(P, x, y, w, tiles, s) {
     if (!tiles.length) return y;
-    const { t } = P;
-    const cols = s.cols || (tiles.length === 4 ? 2 : Math.min(3, tiles.length));
+    const { t, o } = P;
+    const want = o.cols !== 'auto' ? Number(o.cols) : 0;
+    const cols = Math.min(tiles.length, want || s.cols || (tiles.length === 4 ? 2 : Math.min(3, tiles.length)));
     const gap = s.gap || 10;
     const tw = (w - gap * (cols - 1)) / cols;
-    tiles.forEach(([label, value], i) => {
+    const rx = Math.round((s.rx || 10) * Math.min(o.radius, 24) / 16);
+    const style = o.tiles;
+    const bar = style !== 'plain';
+    tiles.forEach(([label, value, ico], i) => {
       const cx = x + (i % cols) * (tw + gap);
       const cy = y + Math.floor(i / cols) * (s.h + gap);
-      P.parts.push(`<rect x="${cx.toFixed(1)}" y="${cy}" width="${tw.toFixed(1)}" height="${s.h}" rx="${s.rx || 10}" fill="${t.tile}" fill-opacity="${t.tileOp}" stroke="${t.tileStroke}" stroke-opacity="${t.tileStrokeOp}"/>`);
-      P.parts.push(`<rect x="${cx.toFixed(1)}" y="${cy + s.h * 0.27}" width="3" height="${s.h * 0.46}" rx="1.5" fill="${P.A}"/>`);
-      P.text(cx + 14, cy + s.h * 0.4, label.toUpperCase(), { size: s.label, weight: 600, ls: 0.6, fill: t.muted });
-      P.text(cx + 14, cy + s.h * 0.77, fit(value, tw - 22, s.value, 700, MONO), { size: s.value, weight: 700, family: MONO });
+      const box = `x="${cx.toFixed(1)}" y="${cy}" width="${tw.toFixed(1)}" height="${s.h}" rx="${rx}"`;
+      if (style === 'filled') P.parts.push(`<rect ${box} fill="${t.tile}" fill-opacity="${t.tileOp}" stroke="${t.tileStroke}" stroke-opacity="${t.tileStrokeOp}"/>`);
+      else if (style === 'outline') P.parts.push(`<rect ${box} fill="none" stroke="${P.A}" stroke-opacity="0.45"/>`);
+      else if (style === 'accent') P.parts.push(`<rect ${box} fill="${P.A}" fill-opacity="${t.isLight ? 0.09 : 0.12}" stroke="${P.A}" stroke-opacity="0.25"/>`);
+      else if (i % cols) P.parts.push(`<rect x="${(cx - gap / 2).toFixed(1)}" y="${cy + s.h * 0.2}" width="1" height="${s.h * 0.6}" fill="${t.track}" fill-opacity="${t.trackOp * 2}"/>`);
+      const tx = bar ? cx + 14 : cx + (i % cols ? 6 : 0);
+      if (bar) P.parts.push(`<rect x="${cx.toFixed(1)}" y="${cy + s.h * 0.27}" width="3" height="${s.h * 0.46}" rx="1.5" fill="${P.A}"/>`);
+      P.text(tx, cy + s.h * 0.4, label.toUpperCase(), { size: s.label, weight: 600, ls: 0.6, fill: t.muted });
+      P.text(tx, cy + s.h * 0.77, fit(value, tw - (tx - cx) - 8 - (o.icons ? 18 : 0), s.value, 700, MONO), { size: s.value, weight: 700, family: MONO });
+      if (o.icons && ico) P.text(cx + tw - 10, cy + s.h * 0.77, ico, { anchor: 'end', size: s.value * 0.95, weight: 700, fill: P.accentText, opacity: 0.85 });
     });
     return y + Math.ceil(tiles.length / cols) * (s.h + gap) + 6;
   }
@@ -511,30 +591,39 @@ const Widget = (() => {
     const { d, t } = P;
     if (!P.show('languages') || !d.langs.length) return y;
     if (s.label !== false) y = sectionLabel(P, x, y, w, 'LANGUAGES');
-    const h = s.barH || 8;
-    const id = P.uid('lang');
-    P.defs.push(`<clipPath id="${id}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}"/></clipPath>`);
-    P.parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="${t.track}" fill-opacity="${t.trackOp}"/>`);
-    let bx = x;
-    const segs = d.langs.map((l, i) => {
-      const sw = (l.pct / 100) * w;
-      const seg = `<rect x="${bx.toFixed(2)}" y="${y}" width="${Math.max(0, sw - 1).toFixed(2)}" height="${h}" fill="${langColor(l.name, i)}"/>`;
-      bx += sw;
-      return seg;
-    });
-    P.parts.push(`<g clip-path="url(#${id})">${segs.join('')}</g>`);
-    y += h + 14;
+    const pills = P.o.langStyle === 'pills';
+    if (!pills) {
+      const h = P.o.langStyle === 'thick' ? Math.max(14, (s.barH || 8) * 1.75) : (s.barH || 8);
+      const id = P.uid('lang');
+      P.defs.push(`<clipPath id="${id}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(h / 2, P.o.radius / 2 + 2)}"/></clipPath>`);
+      P.parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="${t.track}" fill-opacity="${t.trackOp}"/>`);
+      let bx = x;
+      const segs = d.langs.map((l, i) => {
+        const sw = (l.pct / 100) * w;
+        const seg = `<rect x="${bx.toFixed(2)}" y="${y}" width="${Math.max(0, sw - 1).toFixed(2)}" height="${h}" fill="${langColor(l.name, i)}"/>`;
+        bx += sw;
+        return seg;
+      });
+      P.parts.push(`<g clip-path="url(#${id})">${segs.join('')}</g>`);
+      y += h + 14;
+    } else {
+      y += 14;
+    }
     const max = s.legendMax || 6;
+    const rowH = pills ? 28 : 19;
     let lx = x, ly = y;
     d.langs.slice(0, max).forEach((l, i) => {
       const pct = l.pct < 0.1 ? '<0.1' : l.pct.toFixed(1);
-      const lw = measure(`${l.name} ${pct}%`, 12, 400, P.F) + 26;
-      if (lx + lw > x + w && lx > x) { lx = x; ly += 19; }
-      P.parts.push(`<circle cx="${lx + 5}" cy="${ly - 4}" r="4.5" fill="${langColor(l.name, i)}"/>`);
-      P.parts.push(`<text x="${lx + 15}" y="${ly}" font-family="${P.F}" font-size="12" fill="${t.text}">${xml(l.name)} <tspan fill="${t.muted}">${xml(pct)}%</tspan></text>`);
+      const lw = measure(`${l.name} ${pct}%`, 12, 400, P.F) + (pills ? 34 : 26);
+      if (lx + lw > x + w && lx > x) { lx = x; ly += rowH; }
+      const c = langColor(l.name, i);
+      if (pills) P.parts.push(`<rect x="${lx}" y="${ly - 15}" width="${lw - 8}" height="22" rx="${Math.min(11, P.o.radius / 2 + 3)}" fill="${c}" fill-opacity="0.16" stroke="${c}" stroke-opacity="0.35"/>`);
+      const ox = pills ? 9 : 0;
+      P.parts.push(`<circle cx="${lx + 5 + ox}" cy="${ly - 4}" r="4.5" fill="${c}"/>`);
+      P.parts.push(`<text x="${lx + 15 + ox}" y="${ly}" font-family="${P.F}" font-size="12" fill="${t.text}">${xml(l.name)} <tspan fill="${t.muted}">${xml(pct)}%</tspan></text>`);
       lx += lw;
     });
-    return ly + 18;
+    return ly + (pills ? 22 : 18);
   }
 
   function sparkPath(pts, floor) {
@@ -563,11 +652,37 @@ const Widget = (() => {
     const gid = P.uid('area');
     P.defs.push(`<linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.A}" stop-opacity="0.4"/><stop offset="1" stop-color="${P.A}" stop-opacity="0"/></linearGradient>`);
     const lid = P.uid('line');
-    P.defs.push(`<linearGradient id="${lid}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${P.A}"/><stop offset="1" stop-color="${P.A2}"/></linearGradient>`);
+    P.defs.push(`<linearGradient id="${lid}" gradientUnits="userSpaceOnUse" x1="${x}" y1="0" x2="${x + w}" y2="0"><stop offset="0" stop-color="${P.A}"/><stop offset="1" stop-color="${P.A2}"/></linearGradient>`);
     P.parts.push(`<line x1="${x}" y1="${y + h}" x2="${x + w}" y2="${y + h}" stroke="${t.track}" stroke-opacity="${t.trackOp * 1.5}"/>`);
-    if (s.fill !== false) P.parts.push(`<path d="${path} L${x + w},${y + h} L${x},${y + h} Z" fill="url(#${gid})"/>`);
-    P.parts.push(`<path d="${path}" fill="none" stroke="url(#${lid})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`);
+    const animate = P.o.anim === 'draw';
+    let style = P.o.chart;
+    if (style === 'area' && s.fill === false) style = 'line';
     const peak = d.weeks.indexOf(max);
+
+    if (style === 'bars' || style === 'dots') {
+      const slot = w / d.weeks.length;
+      const items = d.weeks.map((v, i) => {
+        const cx = x + i * slot + slot / 2;
+        const f = v / max;
+        if (style === 'bars') {
+          const bh = Math.max(v ? 2 : 1, f * (h - 2));
+          const grow = animate ? `<animate attributeName="height" from="0" to="${bh.toFixed(1)}" dur="1.2s" begin="${(i * 0.015).toFixed(3)}s" fill="freeze"/><animate attributeName="y" from="${y + h}" to="${(y + h - bh).toFixed(1)}" dur="1.2s" begin="${(i * 0.015).toFixed(3)}s" fill="freeze"/>` : '';
+          return `<rect x="${(cx - slot * 0.32).toFixed(1)}" y="${(y + h - bh).toFixed(1)}" width="${(slot * 0.64).toFixed(1)}" height="${bh.toFixed(1)}" rx="${Math.min(1.5, slot * 0.3).toFixed(1)}" fill="url(#${lid})" fill-opacity="${v ? 0.55 + f * 0.45 : 0.25}">${grow}</rect>`;
+        }
+        const r = 1.3 + f * 2.6;
+        const fade = animate ? `<animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="${(i * 0.02).toFixed(3)}s" fill="freeze"/>` : '';
+        return `<circle cx="${cx.toFixed(1)}" cy="${(y + h - f * (h - 6) - 3).toFixed(1)}" r="${r.toFixed(1)}" fill="url(#${lid})" fill-opacity="${v ? 0.45 + f * 0.55 : 0.2}"${animate ? ' opacity="0"' : ''}>${fade}</circle>`;
+      });
+      P.parts.push(`<g>${items.join('')}</g>`);
+      return y + h + 16;
+    }
+
+    const draw = animate ? ' pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"' : '';
+    const drawAnim = animate ? '<animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.8s" fill="freeze"/>' : '';
+    if (style === 'area') {
+      P.parts.push(`<path d="${path} L${x + w},${y + h} L${x},${y + h} Z" fill="url(#${gid})"${animate ? ' opacity="0"' : ''}>${animate ? '<animate attributeName="opacity" from="0" to="1" dur="0.8s" begin="1.2s" fill="freeze"/>' : ''}</path>`);
+    }
+    P.parts.push(`<path d="${path}" fill="none" stroke="url(#${lid})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${draw}>${drawAnim}</path>`);
     P.parts.push(`<circle cx="${pts[peak][0].toFixed(1)}" cy="${pts[peak][1].toFixed(1)}" r="3.5" fill="${P.A}" stroke="${t.bg1}" stroke-width="2"/>`);
     return y + h + 16;
   }
@@ -627,8 +742,9 @@ const Widget = (() => {
     list.forEach((c, i) => {
       const cx = x + i * (sz + gap);
       const id = P.uid('c');
-      P.defs.push(`<clipPath id="${id}"><circle cx="${cx + sz / 2}" cy="${y + sz / 2}" r="${sz / 2}"/></clipPath>`);
-      P.parts.push(`<circle cx="${cx + sz / 2}" cy="${y + sz / 2}" r="${sz / 2 + 1.5}" fill="${i === 0 ? P.A : t.track}" fill-opacity="${i === 0 ? 1 : t.trackOp * 2}"/>`);
+      const crx = avatarRx(P, sz, false);
+      P.defs.push(`<clipPath id="${id}"><rect x="${cx}" y="${y}" width="${sz}" height="${sz}" rx="${crx}"/></clipPath>`);
+      P.parts.push(`<rect x="${cx - 1.5}" y="${y - 1.5}" width="${sz + 3}" height="${sz + 3}" rx="${crx + 1.5}" fill="${i === 0 ? P.A : t.track}" fill-opacity="${i === 0 ? 1 : t.trackOp * 2}"/>`);
       P.parts.push(`<image href="${P.img(c.avatar)}" xlink:href="${P.img(c.avatar)}" x="${cx}" y="${y}" width="${sz}" height="${sz}" clip-path="url(#${id})"><title>${xml(c.login)}: ${c.contributions} commits</title></image>`);
     });
     if (card.contributors.length > list.length) {
@@ -659,30 +775,57 @@ const Widget = (() => {
     P.parts.push(`<line x1="${x}" y1="${y}" x2="${x + w}" y2="${y}" stroke="${t.track}" stroke-opacity="${t.trackOp * 1.5}"/>`);
     y += 22;
     const left = card.release ? `Latest ${card.release.tag} · ${ago(card.release.date)}` : `Last push ${ago(d.r.pushed)}`;
-    P.text(x, y, fit(left, w - 110, 11.5, 400, P.F), { size: 11.5, fill: t.muted });
-    P.parts.push(`<circle cx="${x + w - 62}" cy="${y - 4}" r="3.5" fill="${P.A}"/>`);
-    P.parts.push(`<text x="${x + w}" y="${y}" text-anchor="end" font-family="${P.F}" font-size="11.5" font-weight="700" fill="${t.text}">Repo<tspan fill="${P.accentText}">lysis</tspan></text>`);
+    P.text(x, y, fit(left, w - (P.o.brand ? 110 : 0), 11.5, 400, P.F), { size: 11.5, fill: t.muted });
+    if (P.o.brand) {
+      P.parts.push(`<circle cx="${(x + w - measure('Repolysis', 11.5, 700, P.F) - 9).toFixed(1)}" cy="${y - 4}" r="3.5" fill="${P.A}"/>`);
+      P.parts.push(`<text x="${x + w}" y="${y}" text-anchor="end" font-family="${P.F}" font-size="11.5" font-weight="700" fill="${t.text}">Repo<tspan fill="${P.accentText}">lysis</tspan></text>`);
+    }
     return y + 8;
   }
 
   /* =========================================================
      Background & lighting
      ========================================================= */
+  /** Small deterministic random generator, so a repo's star field never jumps between renders. */
+  function seeded(text) {
+    let h = 2166136261;
+    for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return () => {
+      h = Math.imul(h ^ (h >>> 15), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      return ((h ^= h >>> 16) >>> 0) / 4294967296;
+    };
+  }
+
   function background(P, W, H, rx) {
     const { o, t, A, A2 } = P;
-    const k = Math.max(0, Math.min(100, o.glow)) / 60; // 1 = default strength
+    const k = Math.max(0, Math.min(100, o.glow)) / 60;        // light strength, 1 = default
+    const pm = Math.max(0, Math.min(100, o.pattern)) / 50;    // pattern strength, 1 = default
+    const po = v => Math.min(1, v * pm).toFixed(3);
     const defs = [];
     const layers = [];
+    const lights = [];
 
-    defs.push(`<linearGradient id="${P.pfx}-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${t.bg1}"/><stop offset="1" stop-color="${o.bg === 'solid' ? t.bg1 : t.bg2}"/></linearGradient>`);
+    // Base fill: two theme colours in the chosen direction.
+    const end = o.bg === 'solid' ? t.bg1 : t.bg2;
+    if (o.bgDir === 'radial') {
+      defs.push(`<radialGradient id="${P.pfx}-bg" cx="0.3" cy="0.2" r="1.1"><stop offset="0" stop-color="${end}"/><stop offset="1" stop-color="${t.bg1}"/></radialGradient>`);
+    } else {
+      const dir = { diagonal: 'x1="0" y1="0" x2="1" y2="1"', vertical: 'x1="0" y1="0" x2="0" y2="1"', horizontal: 'x1="0" y1="0" x2="1" y2="0"' }[o.bgDir] || 'x1="0" y1="0" x2="1" y2="1"';
+      defs.push(`<linearGradient id="${P.pfx}-bg" ${dir}><stop offset="0" stop-color="${t.bg1}"/><stop offset="1" stop-color="${end}"/></linearGradient>`);
+    }
     layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-bg)"/>`);
 
     const ink = t.text;
+    const pat = (w, h, body, extra = '') => {
+      defs.push(`<pattern id="${P.pfx}-pat" width="${w}" height="${h}" patternUnits="userSpaceOnUse"${extra}>${body}</pattern>`);
+      layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-pat)"/>`);
+    };
     switch (o.bg) {
       case 'mesh': {
         const blobs = [[0.15, 0.1, A, 0.55], [0.9, 0.25, A2, 0.5], [0.55, 1.05, mix(A, A2, 0.5), 0.45]];
         blobs.forEach(([cx, cy, c, r], i) => {
-          defs.push(`<radialGradient id="${P.pfx}-mesh${i}" cx="${cx}" cy="${cy}" r="${r}"><stop offset="0" stop-color="${c}" stop-opacity="${t.isLight ? 0.22 : 0.3}"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>`);
+          defs.push(`<radialGradient id="${P.pfx}-mesh${i}" cx="${cx}" cy="${cy}" r="${r}"><stop offset="0" stop-color="${c}" stop-opacity="${po(t.isLight ? 0.22 : 0.3)}"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>`);
           layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-mesh${i})"/>`);
         });
         break;
@@ -691,68 +834,122 @@ const Widget = (() => {
         defs.push(`<filter id="${P.pfx}-blur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="${Math.max(18, Math.min(W, H) * 0.09)}"/></filter>`);
         defs.push(`<linearGradient id="${P.pfx}-aur" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${A}"/><stop offset="0.5" stop-color="${A2}"/><stop offset="1" stop-color="${A}"/></linearGradient>`);
         const band = (yy, amp, op) => `<path d="M${-W * 0.1},${yy} C${W * 0.25},${yy - amp} ${W * 0.45},${yy + amp} ${W * 0.7},${yy - amp * 0.4} S${W * 1.05},${yy + amp * 0.6} ${W * 1.1},${yy} L${W * 1.1},${yy + H * 0.16} L${-W * 0.1},${yy + H * 0.16} Z" fill="url(#${P.pfx}-aur)" opacity="${op}"/>`;
-        layers.push(`<g filter="url(#${P.pfx}-blur)">${band(H * 0.08, H * 0.12, t.isLight ? 0.3 : 0.45)}${band(H * 0.32, H * 0.08, t.isLight ? 0.14 : 0.2)}</g>`);
+        layers.push(`<g filter="url(#${P.pfx}-blur)">${band(H * 0.08, H * 0.12, po(t.isLight ? 0.3 : 0.45))}${band(H * 0.32, H * 0.08, po(t.isLight ? 0.14 : 0.2))}</g>`);
         break;
       }
       case 'grid':
-        defs.push(`<pattern id="${P.pfx}-pat" width="22" height="22" patternUnits="userSpaceOnUse"><path d="M22 0H0V22" fill="none" stroke="${ink}" stroke-opacity="${t.isLight ? 0.07 : 0.06}"/></pattern>`);
+        pat(22, 22, `<path d="M22 0H0V22" fill="none" stroke="${ink}" stroke-opacity="${po(t.isLight ? 0.07 : 0.06)}"/>`);
         defs.push(`<linearGradient id="${P.pfx}-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0.15"/></linearGradient><mask id="${P.pfx}-mask"><rect width="${W}" height="${H}" fill="url(#${P.pfx}-fade)"/></mask>`);
-        layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-pat)" mask="url(#${P.pfx}-mask)"/>`);
+        layers[layers.length - 1] = layers[layers.length - 1].replace('/>', ` mask="url(#${P.pfx}-mask)"/>`);
         break;
       case 'dots':
-        defs.push(`<pattern id="${P.pfx}-pat" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.1" fill="${ink}" fill-opacity="${t.isLight ? 0.13 : 0.1}"/></pattern>`);
-        layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-pat)"/>`);
+        pat(16, 16, `<circle cx="2" cy="2" r="1.1" fill="${ink}" fill-opacity="${po(t.isLight ? 0.13 : 0.1)}"/>`);
         break;
       case 'stripes':
-        defs.push(`<pattern id="${P.pfx}-pat" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="14" fill="${ink}" fill-opacity="${t.isLight ? 0.035 : 0.03}"/></pattern>`);
-        layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-pat)"/>`);
+        pat(14, 14, `<rect width="6" height="14" fill="${ink}" fill-opacity="${po(t.isLight ? 0.035 : 0.03)}"/>`, ' patternTransform="rotate(45)"');
+        break;
+      case 'waves':
+        pat(120, 22, `<path d="M0 11 C20 1 40 1 60 11 S100 21 120 11" fill="none" stroke="${A}" stroke-opacity="${po(t.isLight ? 0.16 : 0.13)}" stroke-width="1.4"/>`);
+        break;
+      case 'hex':
+        pat(28, 49, `<path d="M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z" fill="${ink}" fill-opacity="${po(t.isLight ? 0.05 : 0.045)}"/>`);
+        break;
+      case 'stars': {
+        const rnd = seeded(P.card.repo.full);
+        const n = Math.round((W * H) / 2600);
+        const dots = [];
+        for (let i = 0; i < n; i++) {
+          const r = rnd() < 0.12 ? 1.3 + rnd() * 0.8 : 0.5 + rnd() * 0.7;
+          const c = rnd() < 0.18 ? (rnd() < 0.5 ? A : A2) : ink;
+          dots.push(`<circle cx="${(rnd() * W).toFixed(1)}" cy="${(rnd() * H).toFixed(1)}" r="${r.toFixed(2)}" fill="${c}" fill-opacity="${po((t.isLight ? 0.18 : 0.25) + rnd() * 0.35)}"/>`);
+        }
+        layers.push(`<g>${dots.join('')}</g>`);
+        break;
+      }
+      case 'rings': {
+        const cx = W * 0.92, cy = H * 0.12;
+        const rings = [];
+        for (let r = 30, i = 0; r < Math.hypot(W, H); r += 26, i++) {
+          rings.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="none" stroke="${i % 3 === 0 ? A : ink}" stroke-opacity="${po((i % 3 === 0 ? 0.16 : 0.06) * Math.max(0.25, 1 - r / Math.hypot(W, H)))}"/>`);
+        }
+        layers.push(`<g>${rings.join('')}</g>`);
+        break;
+      }
+      case 'noise':
+        defs.push(`<filter id="${P.pfx}-noise" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>`);
+        layers.push(`<rect width="${W}" height="${H}" filter="url(#${P.pfx}-noise)" opacity="${po(t.isLight ? 0.09 : 0.11)}"/>`);
         break;
       default: break;
     }
 
     // Lighting
     const op = v => Math.min(1, v * k).toFixed(3);
+    const glowRect = (id, grad) => { defs.push(grad); lights.push(`<rect width="${W}" height="${H}" fill="url(#${id})"/>`); };
+    const g = `${P.pfx}-glow`;
+    const stretch = Math.min(2, W / H * 0.7).toFixed(2);
     switch (o.light) {
       case 'corner':
-        defs.push(`<radialGradient id="${P.pfx}-glow" cx="1" cy="0" r="0.9"><stop offset="0" stop-color="${A}" stop-opacity="${op(t.glowOp)}"/><stop offset="1" stop-color="${A}" stop-opacity="0"/></radialGradient>`);
-        layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-glow)"/>`);
+        glowRect(g, `<radialGradient id="${g}" cx="1" cy="0" r="0.9"><stop offset="0" stop-color="${A}" stop-opacity="${op(t.glowOp)}"/><stop offset="1" stop-color="${A}" stop-opacity="0"/></radialGradient>`);
         break;
       case 'top':
-        defs.push(`<radialGradient id="${P.pfx}-glow" cx="0.5" cy="-0.1" r="0.75" gradientTransform="translate(0.5 0) scale(1 ${Math.min(2, W / H * 0.7).toFixed(2)}) translate(-0.5 0)"><stop offset="0" stop-color="${A}" stop-opacity="${op(t.glowOp * 1.2)}"/><stop offset="1" stop-color="${A}" stop-opacity="0"/></radialGradient>`);
-        layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-glow)"/>`);
+        glowRect(g, `<radialGradient id="${g}" cx="0.5" cy="-0.1" r="0.75" gradientTransform="translate(0.5 0) scale(1 ${stretch}) translate(-0.5 0)"><stop offset="0" stop-color="${A}" stop-opacity="${op(t.glowOp * 1.2)}"/><stop offset="1" stop-color="${A}" stop-opacity="0"/></radialGradient>`);
+        break;
+      case 'bottom':
+        glowRect(g, `<radialGradient id="${g}" cx="0.5" cy="1.1" r="0.75" gradientTransform="translate(0.5 1) scale(1 ${stretch}) translate(-0.5 -1)"><stop offset="0" stop-color="${A}" stop-opacity="${op(t.glowOp * 1.25)}"/><stop offset="0.5" stop-color="${A2}" stop-opacity="${op(t.glowOp * 0.35)}"/><stop offset="1" stop-color="${A2}" stop-opacity="0"/></radialGradient>`);
         break;
       case 'left':
-        defs.push(`<radialGradient id="${P.pfx}-glow" cx="0" cy="0.5" r="0.8"><stop offset="0" stop-color="${A}" stop-opacity="${op(t.glowOp * 1.1)}"/><stop offset="0.6" stop-color="${A2}" stop-opacity="${op(t.glowOp * 0.25)}"/><stop offset="1" stop-color="${A2}" stop-opacity="0"/></radialGradient>`);
-        layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-glow)"/>`);
+        glowRect(g, `<radialGradient id="${g}" cx="0" cy="0.5" r="0.8"><stop offset="0" stop-color="${A}" stop-opacity="${op(t.glowOp * 1.1)}"/><stop offset="0.6" stop-color="${A2}" stop-opacity="${op(t.glowOp * 0.25)}"/><stop offset="1" stop-color="${A2}" stop-opacity="0"/></radialGradient>`);
+        break;
+      case 'dual':
+        glowRect(g, `<radialGradient id="${g}" cx="1" cy="0" r="0.8"><stop offset="0" stop-color="${A}" stop-opacity="${op(t.glowOp)}"/><stop offset="1" stop-color="${A}" stop-opacity="0"/></radialGradient>`);
+        glowRect(`${g}2`, `<radialGradient id="${g}2" cx="0" cy="1" r="0.8"><stop offset="0" stop-color="${A2}" stop-opacity="${op(t.glowOp * 0.9)}"/><stop offset="1" stop-color="${A2}" stop-opacity="0"/></radialGradient>`);
+        break;
+      case 'center':
+        glowRect(g, `<radialGradient id="${g}" cx="0.5" cy="0.45" r="0.6"><stop offset="0" stop-color="${A}" stop-opacity="${op(t.glowOp * 0.85)}"/><stop offset="0.7" stop-color="${A2}" stop-opacity="${op(t.glowOp * 0.15)}"/><stop offset="1" stop-color="${A2}" stop-opacity="0"/></radialGradient>`);
         break;
       case 'spotlight':
-        defs.push(`<radialGradient id="${P.pfx}-glow" cx="0.5" cy="0" r="0.85"><stop offset="0" stop-color="${t.isLight ? A : '#ffffff'}" stop-opacity="${op(t.isLight ? 0.14 : 0.13)}"/><stop offset="0.45" stop-color="${A}" stop-opacity="${op(t.glowOp * 0.45)}"/><stop offset="1" stop-color="${A}" stop-opacity="0"/></radialGradient>`);
-        layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-glow)"/>`);
-        defs.push(`<radialGradient id="${P.pfx}-vig" cx="0.5" cy="0.5" r="0.75"><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="${t.isLight ? 0.06 : 0.35}"/></radialGradient>`);
-        layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-vig)"/>`);
+        glowRect(g, `<radialGradient id="${g}" cx="0.5" cy="0" r="0.85"><stop offset="0" stop-color="${t.isLight ? A : '#ffffff'}" stop-opacity="${op(t.isLight ? 0.14 : 0.13)}"/><stop offset="0.45" stop-color="${A}" stop-opacity="${op(t.glowOp * 0.45)}"/><stop offset="1" stop-color="${A}" stop-opacity="0"/></radialGradient>`);
+        glowRect(`${P.pfx}-vig`, `<radialGradient id="${P.pfx}-vig" cx="0.5" cy="0.5" r="0.75"><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="${t.isLight ? 0.06 : 0.35}"/></radialGradient>`);
         break;
       case 'neon':
-        defs.push(`<radialGradient id="${P.pfx}-glow" cx="0.5" cy="0.5" r="0.7"><stop offset="0.55" stop-color="${A}" stop-opacity="0"/><stop offset="1" stop-color="${A}" stop-opacity="${op(t.glowOp * 0.7)}"/></radialGradient>`);
-        layers.push(`<rect width="${W}" height="${H}" fill="url(#${P.pfx}-glow)"/>`);
+        glowRect(g, `<radialGradient id="${g}" cx="0.5" cy="0.5" r="0.7"><stop offset="0.55" stop-color="${A}" stop-opacity="0"/><stop offset="1" stop-color="${A}" stop-opacity="${op(t.glowOp * 0.7)}"/></radialGradient>`);
         break;
       default: break;
     }
+    if (lights.length) {
+      const pulse = o.anim === 'pulse' ? '<animate attributeName="opacity" values="1;0.35;1" dur="3.2s" repeatCount="indefinite"/>' : '';
+      layers.push(`<g>${lights.join('')}${pulse}</g>`);
+    }
 
     // Accent strip on top (not on the badge, which has its own)
-    if (o.template !== 'badge' && o.light !== 'neon') {
+    if (o.strip && o.template !== 'badge' && o.light !== 'neon') {
       defs.push(`<linearGradient id="${P.pfx}-strip" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${A}"/><stop offset="1" stop-color="${A2}"/></linearGradient>`);
       layers.push(`<rect width="${W}" height="3" fill="url(#${P.pfx}-strip)"/>`);
     }
 
-    // Border / neon edge (drawn above content clip)
+    // Shimmer: a soft band of light that sweeps across the card.
+    if (o.anim === 'shimmer') {
+      defs.push(`<linearGradient id="${P.pfx}-shim" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.5" stop-color="#fff" stop-opacity="${t.isLight ? 0.35 : 0.09}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`);
+      P.overlay = `<rect x="0" y="${-H}" width="${Math.max(120, W * 0.35)}" height="${H * 3}" fill="url(#${P.pfx}-shim)" transform="rotate(20)"><animateTransform attributeName="transform" type="translate" additive="sum" values="${-W * 1.2} 0;${W * 1.6} 0;${W * 1.6} 0" keyTimes="0;0.6;1" dur="5s" repeatCount="indefinite"/></rect>`;
+    }
+
+    // Border / neon edge (drawn above the content)
     let edge = '';
+    const border = o.border === true ? 'subtle' : o.border === false ? 'none' : o.border;
+    const gradDef = id => defs.push(`<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${A}"/><stop offset="1" stop-color="${A2}"/></linearGradient>`);
     if (o.light === 'neon') {
-      defs.push(`<linearGradient id="${P.pfx}-neon" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${A}"/><stop offset="1" stop-color="${A2}"/></linearGradient>`);
+      gradDef(`${P.pfx}-neon`);
       defs.push(`<filter id="${P.pfx}-neonblur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${(3 + 3 * k).toFixed(1)}"/></filter>`);
-      edge = `<rect x="1.5" y="1.5" width="${W - 3}" height="${H - 3}" rx="${Math.max(0, rx - 1)}" fill="none" stroke="url(#${P.pfx}-neon)" stroke-width="${(2 + k).toFixed(1)}" filter="url(#${P.pfx}-neonblur)" opacity="${Math.min(1, 0.9 * k).toFixed(2)}"/>
+      const pulse = o.anim === 'pulse' ? `<animate attributeName="opacity" values="${Math.min(1, 0.9 * k).toFixed(2)};0.25;${Math.min(1, 0.9 * k).toFixed(2)}" dur="3.2s" repeatCount="indefinite"/>` : '';
+      edge = `<rect x="1.5" y="1.5" width="${W - 3}" height="${H - 3}" rx="${Math.max(0, rx - 1)}" fill="none" stroke="url(#${P.pfx}-neon)" stroke-width="${(2 + k).toFixed(1)}" filter="url(#${P.pfx}-neonblur)" opacity="${Math.min(1, 0.9 * k).toFixed(2)}">${pulse}</rect>
 <rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="${Math.max(0, rx - 1)}" fill="none" stroke="url(#${P.pfx}-neon)" stroke-width="1.5"/>`;
-    } else if (o.border) {
+    } else if (border === 'subtle') {
       edge = `<rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="${rx}" fill="none" stroke="${t.border}" stroke-opacity="${t.borderOp}"/>`;
+    } else if (border === 'accent') {
+      edge = `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="${Math.max(0, rx - 0.5)}" fill="none" stroke="${A}" stroke-opacity="0.75" stroke-width="2"/>`;
+    } else if (border === 'gradient') {
+      gradDef(`${P.pfx}-edge`);
+      edge = `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="${Math.max(0, rx - 0.5)}" fill="none" stroke="url(#${P.pfx}-edge)" stroke-width="2"/>`;
     }
     return { defs, layers, edge };
   }
@@ -866,13 +1063,16 @@ const Widget = (() => {
      ========================================================= */
   function render(card, opts, images = new Map()) {
     const o = { ...defaultOptions(), ...opts };
+    if (opts && opts.rounded === false && opts.radius === undefined) o.radius = 4; // older saved options
+    fullNumbers = o.numbers === 'full';
     const P = painter(card, o, images);
     let size;
     if (o.template === 'wide') size = wideLayout(P);
     else if (o.template === 'badge') size = badgeLayout(P);
     else size = stackLayout(P, STACK[o.template] || STACK.classic);
+    fullNumbers = false;
     const { W, H } = size;
-    const rx = o.template === 'badge' ? (o.rounded ? H / 2 : 6) : (o.rounded ? 16 : 4);
+    const rx = o.template === 'badge' ? Math.min(H / 2, o.radius * 1.25) : o.radius;
     const bg = background(P, W, H, rx);
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${xml(card.repo.full)} stats">
@@ -885,6 +1085,7 @@ ${P.defs.join('\n')}
 <g clip-path="url(#${P.pfx}-card)">
 ${bg.layers.join('\n')}
 ${P.parts.join('\n')}
+${P.overlay || ''}
 </g>
 ${bg.edge}
 </svg>`;
@@ -892,467 +1093,34 @@ ${bg.edge}
   }
 
   /* =========================================================
-     "Describe your style" – free text -> options
-     Works on a lowercase, accent-free copy of the text ("różowy" -> "rozowy"),
-     fixes small typos, understands emoji, and always produces *something*:
-     when no known word is found, the look is derived from the text itself.
+     Presets: one-click looks. They change the look only;
+     template, elements and title stay as they are.
      ========================================================= */
-  const fold = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l');
-
-  // English colour names (exact word, or with -ish / -y).
-  const COLOR_WORDS = {
-    red: '#ED4245', crimson: '#DC143C', ruby: '#E0115F', scarlet: '#FF2400', maroon: '#9F1239', burgundy: '#9F1239', wine: '#9F1239',
-    orange: '#F0B232', amber: '#FFB000', gold: '#E9B949', golden: '#E9B949', bronze: '#CD7F32', copper: '#B87333',
-    yellow: '#FEE75C', lemon: '#FDE047', banana: '#FDE047', lime: '#A3E635', olive: '#84823C', green: '#57F287', emerald: '#10B981',
-    jade: '#00A86B', mint: '#5EEAD4', teal: '#14B8A6', turquoise: '#2DD4BF', cyan: '#00A8FC', aqua: '#22D3EE', sky: '#38BDF8',
-    azure: '#3B9EFF', blue: '#3B82F6', cobalt: '#2563EB', sapphire: '#2563EB', indigo: '#6366F1', blurple: '#5865F2',
-    purple: '#9B59B6', violet: '#9B84EE', lavender: '#B4A7F5', lilac: '#C8A2C8', plum: '#8E4585', grape: '#7C3AED', orchid: '#DA70D6',
-    magenta: '#D946EF', pink: '#EC4899', fuchsia: '#EB459E', rose: '#F43F5E', strawberry: '#F43F5E', cherry: '#BE123C',
-    coral: '#FF7F50', salmon: '#FA8072', peach: '#FFB38A', apricot: '#FBCEB1', brown: '#A0522D', beige: '#D6C3A5', cream: '#F3E5C0',
-    sand: '#D8B98A', khaki: '#BDB76B', silver: '#C0C4CC', gray: '#949BA4', grey: '#949BA4', berry: '#A21CAF',
-  };
-  // Polish colour stems (match the start of a word, so every grammatical form works).
-  const COLOR_STEMS = [
-    ['czerwon', '#ED4245'], ['karmazyn', '#DC143C'], ['bordo', '#9F1239'], ['wisni', '#BE123C'], ['malin', '#E11D48'],
-    ['pomarancz', '#F0B232'], ['zlot', '#E9B949'], ['zolt', '#FEE75C'], ['cytryn', '#FDE047'], ['limonk', '#A3E635'],
-    ['seledyn', '#A7F3D0'], ['oliwk', '#84823C'], ['zielon', '#57F287'], ['szmaragd', '#10B981'], ['mietow', '#5EEAD4'],
-    ['turkus', '#2DD4BF'], ['morsk', '#14B8A6'], ['blekit', '#38BDF8'], ['niebiesk', '#3B82F6'], ['granat', '#1E3A8A'],
-    ['fiolet', '#9B84EE'], ['purpur', '#9B59B6'], ['liliow', '#C8A2C8'], ['lawend', '#B4A7F5'], ['rozow', '#EC4899'],
-    ['truskaw', '#F43F5E'], ['koral', '#FF7F50'], ['lososi', '#FA8072'], ['brzoskwin', '#FFB38A'], ['braz', '#A0522D'],
-    ['bezow', '#D6C3A5'], ['kremow', '#F3E5C0'], ['srebr', '#C0C4CC'], ['szar', '#949BA4'], ['miedzi', '#B87333'], ['jagod', '#A21CAF'],
-  ];
-  const DARKER = /^(dark|deep|ciemn\w*)$/;
-  const LIGHTER = /^(light|pale|soft|jasn\w*|blad\w*)$/;
-
-  // Emoji -> words the parser knows.
-  const EMOJI = [
-    ['🔥', 'fire'], ['🌊', 'ocean'], ['🌸', 'sakura'], ['🎃', 'halloween'], ['🎄', 'christmas'], ['❄', 'ice'], ['☃', 'winter'],
-    ['🌙', 'space'], ['⭐', 'space'], ['🌟', 'space'], ['✨', 'glow'], ['🌌', 'galaxy'], ['🌅', 'sunset'], ['🌄', 'sunrise'],
-    ['🌲', 'forest'], ['🌳', 'forest'], ['🌿', 'nature'], ['🍃', 'nature'], ['☕', 'coffee'], ['👑', 'royal'], ['💎', 'luxury'],
-    ['💀', 'gothic'], ['🦇', 'gothic'], ['🤖', 'robot'], ['👽', 'alien'], ['🛸', 'alien'], ['🌈', 'rainbow'], ['⚡', 'storm'],
-    ['☢', 'toxic'], ['☣', 'toxic'], ['❤', 'love'], ['💖', 'love'], ['💕', 'love'], ['🐉', 'dragon'], ['🏴', 'pirate'],
-    ['🎮', 'gaming'], ['👾', 'pixel'], ['💻', 'terminal'], ['🍂', 'autumn'], ['🍁', 'autumn'], ['☀', 'summer'], ['🏖', 'tropical'],
-    ['🌴', 'tropical'], ['🌷', 'spring'], ['🌹', 'love'], ['🚀', 'futuristic'], ['🧙', 'magic'], ['🔮', 'magic'], ['🍫', 'chocolate'],
-    ['💜', 'purple'], ['💙', 'blue'], ['💚', 'green'], ['💛', 'yellow'], ['🧡', 'orange'], ['🖤', 'black'], ['🤍', 'white'],
+  const PRESETS = [
+    { key: 'cyberpunk', label: 'Cyberpunk', o: { theme: 'midnight', bg: 'grid', light: 'neon', accent: '#EB459E', accent2: '#00E5FF', font: 'mono', glow: 75, tiles: 'outline', radius: 6 } },
+    { key: 'synthwave', label: 'Synthwave', o: { theme: 'midnight', bg: 'waves', light: 'bottom', accent: '#FF4FD8', accent2: '#FFB000', glow: 80, tiles: 'accent' } },
+    { key: 'terminal', label: 'Terminal', o: { theme: 'oled', bg: 'noise', light: 'none', accent: '#57F287', accent2: '#2ECC71', font: 'mono', radius: 4, tiles: 'outline', chart: 'bars', strip: false } },
+    { key: 'ocean', label: 'Ocean', o: { theme: 'midnight', bg: 'waves', light: 'top', accent: '#00A8FC', accent2: '#14B8A6', tiles: 'accent' } },
+    { key: 'sunset', label: 'Sunset', o: { theme: 'dark', bg: 'aurora', light: 'dual', accent: '#FF7F50', accent2: '#EC4899', glow: 75 } },
+    { key: 'forest', label: 'Forest', o: { theme: 'dark', bg: 'mesh', light: 'left', accent: '#57F287', accent2: '#14B8A6', font: 'rounded' } },
+    { key: 'galaxy', label: 'Galaxy', o: { theme: 'midnight', bg: 'stars', light: 'spotlight', accent: '#9B84EE', accent2: '#EB459E', anim: 'shimmer' } },
+    { key: 'luxury', label: 'Luxury', o: { theme: 'oled', bg: 'solid', light: 'spotlight', accent: '#E9B949', accent2: '#B8860B', font: 'serif', border: 'accent', tiles: 'plain' } },
+    { key: 'pastel', label: 'Pastel', o: { theme: 'light', bg: 'mesh', light: 'none', accent: '#F9A8D4', accent2: '#A5B4FC', font: 'rounded', radius: 24 } },
+    { key: 'paper', label: 'Paper', o: { theme: 'cream', bg: 'dots', light: 'none', accent: '#8B5E3C', accent2: '#A0522D', font: 'serif', tiles: 'outline' } },
+    { key: 'blueprint', label: 'Blueprint', o: { bgColors: ['#0B3D91', '#0A2A66'], bg: 'grid', light: 'none', accent: '#FFFFFF', accent2: '#9EC5FF', font: 'mono', radius: 4, tiles: 'outline', pattern: 80 } },
+    { key: 'slate', label: 'Slate Pro', o: { theme: 'slate', bg: 'solid', light: 'top', accent: '#38BDF8', accent2: '#6366F1', tiles: 'accent', icons: true } },
+    { key: 'arcade', label: 'Arcade', o: { theme: 'plum', bg: 'stripes', light: 'top', accent: '#F0B232', accent2: '#EB459E', font: 'mono', chart: 'bars', radius: 4 } },
+    { key: 'pulse', label: 'Neon Pulse', o: { theme: 'oled', bg: 'hex', light: 'neon', accent: '#00E5FF', accent2: '#A78BFA', glow: 85, anim: 'pulse' } },
+    { key: 'honey', label: 'Honeycomb', o: { theme: 'dark', bg: 'hex', light: 'corner', accent: '#E9B949', accent2: '#F0B232', tiles: 'accent', pattern: 70 } },
+    { key: 'orbit', label: 'Orbit', o: { theme: 'plum', bg: 'rings', light: 'dual', accent: '#F472B6', accent2: '#A78BFA', chart: 'dots' } },
   ];
 
-  // Moods: complete looks. Applied in the order they appear, then specific words override them.
-  const MOODS = {
-    cyberpunk: { theme: 'midnight', bg: 'grid', light: 'neon', accent: '#EB459E', accent2: '#00E5FF', font: 'mono', glow: 75 },
-    neon: { light: 'neon', glow: 80, theme: 'midnight' },
-    synthwave: { theme: 'midnight', bg: 'aurora', light: 'top', accent: '#FF4FD8', accent2: '#FFB000', glow: 80 },
-    vaporwave: { theme: 'midnight', bg: 'grid', light: 'top', accent: '#FF71CE', accent2: '#01CDFE', glow: 75 },
-    retro: { theme: 'midnight', bg: 'stripes', light: 'top', accent: '#F0B232', accent2: '#EB459E', font: 'mono' },
-    pixel: { theme: 'dark', bg: 'grid', light: 'none', accent: '#22C55E', accent2: '#FACC15', font: 'mono', rounded: false },
-    terminal: { theme: 'dark', bg: 'solid', light: 'none', accent: '#57F287', accent2: '#2ECC71', font: 'mono', rounded: false },
-    hacker: { theme: 'dark', bg: 'grid', light: 'none', accent: '#00FF7F', accent2: '#00C853', font: 'mono', rounded: false },
-    matrix: { theme: 'dark', bg: 'dots', light: 'spotlight', accent: '#00FF7F', accent2: '#00C853', font: 'mono' },
-    futuristic: { theme: 'midnight', bg: 'grid', light: 'neon', accent: '#22D3EE', accent2: '#A78BFA', font: 'mono', glow: 70 },
-    modern: { theme: 'dark', bg: 'mesh', light: 'top', accent: '#6366F1', accent2: '#22D3EE' },
-    ocean: { theme: 'midnight', bg: 'mesh', light: 'top', accent: '#00A8FC', accent2: '#14B8A6' },
-    tropical: { theme: 'dark', bg: 'aurora', light: 'corner', accent: '#10B981', accent2: '#FBBF24' },
-    sunset: { theme: 'dark', bg: 'aurora', light: 'corner', accent: '#FF7F50', accent2: '#EC4899', glow: 75 },
-    sunrise: { theme: 'light', bg: 'aurora', light: 'top', accent: '#FB923C', accent2: '#F472B6' },
-    dusk: { theme: 'midnight', bg: 'aurora', light: 'left', accent: '#A78BFA', accent2: '#FB923C' },
-    forest: { theme: 'dark', bg: 'mesh', light: 'left', accent: '#57F287', accent2: '#14B8A6' },
-    nature: { theme: 'dark', bg: 'mesh', light: 'left', accent: '#84CC16', accent2: '#CA8A04' },
-    desert: { bgColors: ['#FBF3E4', '#F3E1C0'], bg: 'stripes', light: 'top', accent: '#D97706', accent2: '#B45309' },
-    fire: { theme: 'dark', bg: 'aurora', light: 'spotlight', accent: '#ED4245', accent2: '#F0B232', glow: 80 },
-    ice: { theme: 'light', bg: 'mesh', light: 'top', accent: '#38BDF8', accent2: '#A5B4FC' },
-    winter: { theme: 'light', bg: 'dots', light: 'top', accent: '#38BDF8', accent2: '#6366F1' },
-    spring: { theme: 'light', bg: 'mesh', light: 'corner', accent: '#F472B6', accent2: '#22C55E' },
-    summer: { theme: 'light', bg: 'aurora', light: 'corner', accent: '#F59E0B', accent2: '#EC4899' },
-    autumn: { theme: 'dark', bg: 'mesh', light: 'left', accent: '#D97706', accent2: '#B91C1C' },
-    halloween: { theme: 'dark', bg: 'stripes', light: 'spotlight', accent: '#FF7518', accent2: '#9B59B6', glow: 75 },
-    christmas: { theme: 'dark', bg: 'dots', light: 'corner', accent: '#ED4245', accent2: '#22C55E' },
-    pastel: { theme: 'light', bg: 'mesh', light: 'none', accent: '#F9A8D4', accent2: '#A5B4FC' },
-    candy: { theme: 'light', bg: 'dots', light: 'corner', accent: '#EC4899', accent2: '#A78BFA' },
-    sakura: { theme: 'light', bg: 'mesh', light: 'corner', accent: '#F472B6', accent2: '#FDA4AF' },
-    love: { theme: 'dark', bg: 'aurora', light: 'corner', accent: '#F43F5E', accent2: '#EC4899' },
-    rainbow: { theme: 'midnight', bg: 'aurora', light: 'neon', accent: '#EC4899', accent2: '#22D3EE', glow: 85 },
-    happy: { theme: 'light', bg: 'dots', light: 'corner', accent: '#FBBF24', accent2: '#F472B6' },
-    energetic: { theme: 'midnight', bg: 'aurora', light: 'neon', accent: '#FACC15', accent2: '#EC4899', glow: 95 },
-    calm: { theme: 'light', bg: 'mesh', light: 'none', accent: '#14B8A6', accent2: '#A5B4FC', glow: 30 },
-    sad: { theme: 'dark', bg: 'solid', light: 'top', accent: '#64748B', accent2: '#94A3B8', glow: 30 },
-    storm: { theme: 'midnight', bg: 'stripes', light: 'spotlight', accent: '#FACC15', accent2: '#60A5FA', glow: 90 },
-    toxic: { theme: 'dark', bg: 'grid', light: 'neon', accent: '#A3E635', accent2: '#84CC16', glow: 85 },
-    alien: { theme: 'midnight', bg: 'dots', light: 'spotlight', accent: '#4ADE80', accent2: '#22D3EE' },
-    robot: { theme: 'dark', bg: 'stripes', light: 'top', accent: '#C0C4CC', accent2: '#60A5FA', font: 'mono', rounded: false },
-    magic: { theme: 'midnight', bg: 'aurora', light: 'spotlight', accent: '#A78BFA', accent2: '#2DD4BF' },
-    dragon: { theme: 'dark', bg: 'aurora', light: 'spotlight', accent: '#DC2626', accent2: '#F59E0B', glow: 80 },
-    gothic: { bgColors: ['#0A0A0A', '#1A0B10'], bg: 'solid', light: 'spotlight', accent: '#9F1239', accent2: '#6B21A8', font: 'serif' },
-    ninja: { bgColors: ['#0B0B0F', '#15151C'], bg: 'solid', light: 'none', accent: '#ED4245', accent2: '#949BA4', rounded: false },
-    pirate: { theme: 'dark', bg: 'stripes', light: 'spotlight', accent: '#E9B949', accent2: '#A0522D', font: 'serif' },
-    military: { bgColors: ['#1F2416', '#2D3420'], bg: 'stripes', light: 'none', accent: '#84CC16', accent2: '#A3A36B', font: 'mono', rounded: false },
-    steampunk: { theme: 'dark', bg: 'stripes', light: 'spotlight', accent: '#B87333', accent2: '#E9B949', font: 'serif' },
-    royal: { theme: 'midnight', bg: 'solid', light: 'spotlight', accent: '#E9B949', accent2: '#9B59B6', font: 'serif' },
-    luxury: { theme: 'dark', bg: 'solid', light: 'spotlight', accent: '#E9B949', accent2: '#B8860B', font: 'serif' },
-    elegant: { font: 'serif', light: 'spotlight', bg: 'solid' },
-    coffee: { bgColors: ['#2A1C14', '#3B2A1E'], bg: 'solid', light: 'spotlight', accent: '#C08552', accent2: '#E6C9A8', font: 'serif' },
-    chocolate: { bgColors: ['#2A1A12', '#3B2418'], bg: 'mesh', light: 'corner', accent: '#D2691E', accent2: '#F3E5C0' },
-    vintage: { bgColors: ['#F5ECD7', '#E8DCC0'], bg: 'dots', light: 'none', accent: '#8B5E3C', accent2: '#A0522D', font: 'serif' },
-    newspaper: { theme: 'light', bg: 'solid', light: 'none', accent: '#1E1F22', accent2: '#5C5E66', font: 'serif', rounded: false },
-    monochrome: { theme: 'dark', bg: 'solid', light: 'none', accent: '#FFFFFF', accent2: '#949BA4' },
-    brutalist: { theme: 'light', bg: 'solid', light: 'none', accent: '#1E1F22', accent2: '#ED4245', font: 'mono', rounded: false, border: true },
-    minimal: { template: 'minimal', bg: 'solid', light: 'none', border: true },
-    clean: { bg: 'solid', light: 'none' },
-    corporate: { theme: 'light', bg: 'solid', light: 'none', accent: '#3B82F6', accent2: '#6366F1', font: 'sans' },
-    gaming: { theme: 'dark', bg: 'grid', light: 'neon', accent: '#5865F2', accent2: '#EB459E', glow: 65 },
-    discord: { theme: 'dark', bg: 'gradient', light: 'corner', accent: '#5865F2', accent2: '#EB459E' },
-    github: { bgColors: ['#0D1117', '#161B22'], bg: 'solid', light: 'none', accent: '#2F81F7', accent2: '#3FB950' },
-    space: { theme: 'midnight', bg: 'dots', light: 'spotlight', accent: '#9B84EE', accent2: '#00A8FC' },
-    galaxy: { theme: 'midnight', bg: 'aurora', light: 'spotlight', accent: '#9B84EE', accent2: '#EB459E' },
-    paper: { theme: 'light', bg: 'dots', light: 'none', font: 'serif', accent: '#1E1F22', accent2: '#5C5E66' },
-    blueprint: { bgColors: ['#0B3D91', '#0A2A66'], bg: 'grid', light: 'none', accent: '#FFFFFF', accent2: '#9EC5FF', font: 'mono', rounded: false },
-  };
-
-  // Other words (English + Polish, accent-free) that mean one of the moods.
-  const MOOD_ALIASES = [
-    [/\bcyber\b/, 'cyberpunk'], [/\bneonow\w*/, 'neon'], [/\b(aesthetic|y2k)\b/, 'vaporwave'],
-    [/\b(8 ?bit|16 ?bit|arcade|piksel\w*|pixel\w*|automat\w*)\b/, 'pixel'],
-    [/\b(console|konsol\w*|bash|linux|cmd|shell)\b/, 'terminal'], [/\b(haker\w*|hakersk\w*)\b/, 'hacker'],
-    [/\b(futur\w*|sci ?fi|hologra\w*|high ?tech|kosmiczn\w* technolog\w*)\b/, 'futuristic'],
-    [/\b(sleek|startup|saas|nowoczesn\w*|glass\w*)\b/, 'modern'],
-    [/\b(sea|morze|morz[ae]|morsk\w* motyw|water|wod[aey]|underwater|podwodn\w*|deep sea|glebin\w*|wave)\b/, 'ocean'],
-    [/\b(tropic\w*|tropik\w*|beach|plaz\w*|palm\w*|island|wysp\w*|wakacj\w*|vacation)\b/, 'tropical'],
-    [/\b(zachod\w*( slonca)?|golden hour)\b/, 'sunset'], [/\b(dawn|morning|wschod\w*|poran\w*|rano)\b/, 'sunrise'],
-    [/\b(twilight|evening|zmierzch\w*|wieczor\w*|wieczorn\w*)\b/, 'dusk'],
-    [/\b(las|lasu|lesn\w*|woods?|jungle|dzungl\w*)\b/, 'forest'],
-    [/\b(natur\w*|earth|ziemi\w*|eco|ekolog\w*|organic|plant\w*|rosli\w*|wood|drewn\w*|leaf|lisc\w*)\b/, 'nature'],
-    [/\b(pustyn\w*|sand|piase?k\w*|dunes?|wydm\w*)\b/, 'desert'],
-    [/\b(flames?|ogien|ognist\w*|ognia|plomie\w*|hot|gorac\w*|inferno|piekl\w*|volcano|wulkan\w*|lava)\b/, 'fire'],
-    [/\b(lod|lodu|lodow\w*|frost|frozen|zimn\w*|cold|mroz\w*|arctic|arktyczn\w*)\b/, 'ice'],
-    [/\b(snow|snieg\w*|snieżn\w*|sniezn\w*|zim[aey]|zimow\w*)\b/, 'winter'],
-    [/\b(wiosn\w*|bloom\w*|flower\w*|floral|kwiat\w*|kwiec\w*)\b/, 'spring'],
-    [/\b(lato|letni\w*|sunny|slonecz\w*|slonce)\b/, 'summer'], [/\b(fall|jesien\w*|jesienn\w*)\b/, 'autumn'],
-    [/\b(xmas|swiat\w*|swiateczn\w*|boze narodzenie|mikolaj\w*|santa)\b/, 'christmas'], [/\b(spooky|dynia|dyni\w*)\b/, 'halloween'],
-    [/\b(pastelow\w*)\b/, 'pastel'], [/\b(cukier\w*|cukierk\w*|sweet|slodk\w*|lollipop|lizak\w*)\b/, 'candy'],
-    [/\b(cute|kawaii|urocz\w*|anime|uwu|japan\w*|japon\w*|cherry blossom)\b/, 'sakura'],
-    [/\b(milos\w*|romant\w*|valentin\w*|walentyn\w*|heart|serc\w*|zakochan\w*)\b/, 'love'],
-    [/\b(tecz\w*|colorful|colourful|kolorow\w*|multicolou?r|psychedel\w*|psychodel\w*|vibrant)\b/, 'rainbow'],
-    [/\b(wesol\w*|radosn\w*|cheerful|joy\w*|smile|usmiech\w*|fun|zabawn\w*)\b/, 'happy'],
-    [/\b(energ\w*|dynami\w*|crazy|szalon\w*|party|impreza\w*|loud|glosn\w*|hype)\b/, 'energetic'],
-    [/\b(zen|spokoj\w*|relax\w*|relaks\w*|peace\w*|cisz\w*|cozy|przytuln\w*|meditat\w*|medytac\w*|chill)\b/, 'calm'],
-    [/\b(smutn\w*|melanchol\w*|rain|rainy|deszcz\w*|gloomy|ponur\w*)\b/, 'sad'],
-    [/\b(burz\w*|thunder\w*|piorun\w*|lightning|blyskawic\w*|electric|elektry\w*)\b/, 'storm'],
-    [/\b(toksy\w*|radioakty\w*|radioactiv\w*|poison\w*|truj\w*|acid|kwas\w*|slime|biohazard)\b/, 'toxic'],
-    [/\b(ufo|kosmit\w*|extraterr\w*)\b/, 'alien'],
-    [/\b(robo\w*|metal\w*|steel|stal\w*|chrom\w*|mech\w*|machine|maszyn\w*|cyborg)\b/, 'robot'],
-    [/\b(myster\w*|tajemnic\w*|magi\w*|fantasy|fantas\w*|wizard|czarodziej\w*|witch|wiedzm\w*|mystic\w*|mistycz\w*|enchant\w*)\b/, 'magic'],
-    [/\b(smok\w*)\b/, 'dragon'],
-    [/\b(goth\w*|gotyc\w*|vampire|wampir\w*|mroczn\w*|mrok\w*|horror|creepy|straszn\w*|dark academia)\b/, 'gothic'],
-    [/\b(stealth|shadow\w*|cien|ukryt\w*|assassin)\b/, 'ninja'], [/\b(pira\w*|treasure|skarb\w*)\b/, 'pirate'],
-    [/\b(army|wojsk\w*|camo|moro|tactical|taktycz\w*|soldier|zolnier\w*)\b/, 'military'],
-    [/\b(industrial|brass|mosiadz\w*)\b/, 'steampunk'],
-    [/\b(krolew\w*|king|krol|queen|krolow\w*|regal|majest\w*|premium|vip)\b/, 'royal'],
-    [/\b(luksus\w*|luxur\w*|rich|bogat\w*|expensive|drog[ia]\w*)\b/, 'luxury'], [/\b(elegan\w*|classy|szykown\w*)\b/, 'elegant'],
-    [/\b(kaw[aey]|kawow\w*|latte|espresso|mocha|cafe)\b/, 'coffee'], [/\b(czekolad\w*|cocoa|kakao)\b/, 'chocolate'],
-    [/\b(old ?school|sepia|antique|antyk\w*|stary|stare|nostalg\w*|klasyczn\w* papier)\b/, 'vintage'],
-    [/\b(gazet\w*|news\w*|magazine|magazyn\w*|print)\b/, 'newspaper'],
-    [/\b(monochrom\w*|black (and|&) white|czarno ?bial\w*|grayscale|greyscale|noir|b ?& ?w)\b/, 'monochrome'],
-    [/\b(brutal\w*|raw|surow\w*)\b/, 'brutalist'],
-    [/\b(czyst\w*|tidy|schludn\w*)\b/, 'clean'],
-    [/\b(business|biznes\w*|firm\w*|office|biur\w*|serious|powazn\w*|formal\w*|linkedin)\b/, 'corporate'], [/\bprofessional\b|\bprofesjonaln\w*/, 'corporate'],
-    [/\b(gamer\w*|gamingow\w*|esport\w*|gra|gry|gier|growy)\b/, 'gaming'],
-    [/\b(octocat)\b/, 'github'],
-    [/\b(kosmos\w*|kosmiczn\w*|cosmic|universe|wszechswiat\w*|planet\w*|astro\w*|rocket|rakiet\w*|starry|gwiezdn\w*)\b/, 'space'],
-    [/\b(galakty\w*|milky way|droga mleczna)\b/, 'galaxy'],
-    [/\b(papier\w*)\b/, 'paper'], [/\b(blueprint|rysunek techniczny|plan techniczny)\b/, 'blueprint'],
-  ];
-
-  const WORDS = [
-    // templates
-    [/\b(compact|small|smaller|mini|little|maly|mala|male|malej|malutk\w*|malenk\w*|mniejsz\w*)\b/, { template: 'compact' }, 'compact'],
-    [/\b(badge|pill|shield|tiny|chip|odznak\w*|plakietk\w*)\b/, { template: 'badge' }, 'badge'],
-    [/\b(wide|banner|rectangle|rectangular|horizontal|landscape|long|prostokat\w*|szerok\w*|pozio\w*|baner\w*)\b/, { template: 'wide' }, 'banner'],
-    [/\b(minimal|minimalist\w*|simple|minimalistyczn\w*|prost[ayeo]|prostsz\w*)\b/, { template: 'minimal' }, 'minimal'],
-    [/\b(classic|full|big|bigger|large|duz\w*|wiekszy|wieksza|pelny|pelna|klasyczn\w*)\b/, { template: 'classic' }, 'classic'],
-    // themes
-    [/\b(midnight|navy|deep|night|noc\w*|nocn\w*|polnoc\w*)\b/, { theme: 'midnight' }, 'midnight theme'],
-    [/(?<!(no|top|side) )\b(light|white|bright|jasn\w*|bial\w*)\b(?! (glow|edge|light))/, { theme: 'light', bgColors: null }, 'light theme'],
-    [/\b(dark|ciemn\w*)\b/, { theme: 'dark' }, 'dark theme'],
-    [/\b(black|czarn\w*|pitch black|oled)\b/, { theme: 'dark', bgColors: ['#050505', '#121212'] }, 'black background'],
-    // backgrounds
-    [/\b(solid|flat|plain|jednolit\w*|plask\w*|gladk\w*)\b/, { bg: 'solid' }, 'solid background'],
-    [/\b(gradient\w*|przejsci\w*|ombre)\b/, { bg: 'gradient' }, 'gradient'],
-    [/\b(mesh|blobs?|soft colou?rs?|plam\w*)\b/, { bg: 'mesh' }, 'mesh'],
-    [/\b(aurora|nebula|zorz\w*|mglawic\w*|fale|falami)\b/, { bg: 'aurora' }, 'aurora'],
-    [/\b(grid|siatk\w*|kratk\w*|lines|linie|liniami|squares)\b/, { bg: 'grid' }, 'grid'],
-    [/\b(dots|dotted|kropk\w*|polka|kropeczk\w*|groszk\w*)\b/, { bg: 'dots' }, 'dots'],
-    [/\b(stripes|striped|diagonal|pask\w*|prazk\w*|ukosn\w*)\b/, { bg: 'stripes' }, 'stripes'],
-    // lights
-    [/\b(glow|glowing|swiec\w*|poswiat\w*|blask\w*|lsni\w*|shiny|shine|blyszcz\w*)\b/, { glow: 85 }, 'strong glow'],
-    [/\b(spotlight|reflektor\w*)\b/, { light: 'spotlight' }, 'spotlight'],
-    [/\btop light\b|\bz gory\b|\bod gory\b/, { light: 'top' }, 'top light'],
-    [/\bside light\b|\bz boku\b|\bod boku\b|\bz lewej\b/, { light: 'left' }, 'side light'],
-    [/\bcorner( glow| light)?\b|\bw rogu\b|\bz rogu\b/, { light: 'corner' }, 'corner glow'],
-    [/\b(neon edge|edge glow|glowing border|swiecac\w* ramk\w*|neonow\w* ramk\w*)\b/, { light: 'neon' }, 'neon edge'],
-    [/\b(no glow|no light|unlit|matte|matow\w*|bez swiatla|bez poswiaty|bez blasku)\b/, { light: 'none' }, 'no lighting'],
-    [/\b(subtle|soft|delikatn\w*|subteln\w*|lekk\w*)\b/, { glow: 35 }, 'subtle light'],
-    [/\b(bold|intense|vivid|strong|mocn\w*|intensywn\w*|jaskraw\w*|wyrazist\w*)\b/, { glow: 95 }, 'intense light'],
-    // fonts & shape
-    [/\b(mono|monospace|code|coder|coding|programmer|developer|dev|kod\w*|programist\w*|maszynow\w*)\b/, { font: 'mono' }, 'mono font'],
-    [/\b(serif|book|ksiazk\w*|szeryf\w*)\b/, { font: 'serif' }, 'serif font'],
-    [/\b(sans|bezszeryf\w*)\b/, { font: 'sans' }, 'sans font'],
-    [/\b(sharp|square|boxy|angular|ostr\w*|kwadrat\w*|kancias\w*)\b/, { rounded: false }, 'sharp corners'],
-    [/\b(rounded|round|zaokragl\w*|okragl\w*|oble|obly)\b/, { rounded: true }, 'rounded corners'],
-    [/\b(borderless|no border|bez ramk\w*|bez obramowani\w*)\b/, { border: false }, 'no border'],
-    [/\b(with border|z ramk\w*|obramowan\w*|outline)\b/, { border: true }, 'border'],
-  ];
-
-  // Element names (accent-free). Order matters a little: specific stats before generic ones.
-  const ELEMENT_WORDS = {
-    avatar: /\b(avatars?|awatar\w*|logo|profile pic\w*|zdjeci\w*)\b/,
-    description: /\b(description|desc|opis\w*)\b/,
-    meta: /\b(meta|license|licencj\w*)\b/,
-    grade: /\b(grade|rank\w*|ocen\w*|score|wynik\w*)\b/,
-    stars: /\b(stars?|gwiazd\w*)\b/,
-    forks: /\b(forks?|fork\w*)\b/,
-    commits: /\b(total commits|commit count|commits|commity|commitow|commitami)\b/,
-    contribCount: /\b(contributor count|number of contributors|liczb\w* kontrybutor\w*)\b/,
-    age: /\b(age|wiek\w*)\b/,
-    velocity: /\b(stars per day|velocity|gwiazd\w* dzienn\w*|tempo)\b/,
-    watchers: /\b(watchers?|obserwuj\w*)\b/,
-    issues: /\b(issues?|zgloszen\w*|bled\w*|bug\w*)\b/,
-    lastPush: /\b(last push|last commit|ostatni\w* (push|commit|aktualizacj)\w*|updated)\b/,
-    release: /\b(releases?|wydani\w*|wersj\w*|version)\b/,
-    size: /\b(size|rozmiar\w*|wielkosc\w*)\b/,
-    busiestDay: /\b(busiest day|weekday|dzien tygodnia|najaktywniejsz\w* dzien)\b/,
-    forkRate: /\b(fork rate|forks per)\b/,
-    busFactor: /\b(bus factor)\b/,
-    languages: /\b(languages?|langs?|jezyk\w*|technolog\w*)\b/,
-    activity: /\b(activity|sparkline|chart|graph|aktywnos\w*|wykres\w*)\b/,
-    milestone: /\b(milestones?|progress|prog|progu|cel|celu|postep\w*|kamien\w* milow\w*|milow\w*)\b/,
-    health: /\b(health|checks?|zdrowi\w*|kondycj\w*)\b/,
-    contributors: /\b(contributors?|people|team|kontrybutor\w*|autor\w*|ludzi\w*|zespol\w*)\b/,
-    topics: /\b(topics?|tags?|tagi|tagami|temat\w*)\b/,
-    footer: /\b(footer|stopk\w*)\b/,
-  };
-  const ELEMENT_LABEL = key => (ELEMENTS.find(e => e.key === key) || { label: key }).label.toLowerCase();
-
-  // Words that are never typo-corrected (so "like" never becomes "lime").
-  const STOP = new Set(('the and with without for from that this have want make more less very really please just only also some card look style '
-    + 'like nice cool kind sort mode feel vibe color colour colors colours font theme background light lights border corner corners show hide '
-    + 'chce chcialbym zrob zrobic niech bedzie jakis jakas taki taka troche bardzo karta karte karty styl stylu kolor kolory kolorze kolorami '
-    + 'start there these where other about would could great thing think good fine call pick stuff tlo tlem tla czcionka czcionke ramka ramke dodaj pokaz ukryj usun bez oraz albo ladny ladna fajny fajna').split(' '));
-
-  function levenshtein(a, b) {
-    if (Math.abs(a.length - b.length) > 2) return 9;
-    const row = Array.from({ length: b.length + 1 }, (_, i) => i);
-    for (let i = 1; i <= a.length; i++) {
-      let prev = row[0]; row[0] = i;
-      for (let j = 1; j <= b.length; j++) {
-        const tmp = row[j];
-        row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
-        prev = tmp;
-      }
-    }
-    return row[b.length];
+  /** Apply a preset: reset the look to defaults, keep template, elements and title. */
+  function applyPreset(o, key) {
+    const p = PRESETS.find(x => x.key === key);
+    if (!p) return o;
+    return { ...defaultOptions(), show: new Set(o.show), template: o.template, title: o.title, ...p.o };
   }
-
-  // Single words the typo fixer can snap to.
-  const VOCAB = [...new Set([
-    ...Object.keys(MOODS), ...Object.keys(COLOR_WORDS),
-    'compact', 'banner', 'minimal', 'classic', 'midnight', 'light', 'dark', 'solid', 'gradient', 'aurora', 'stripes', 'spotlight',
-    'glowing', 'monospace', 'serif', 'rounded', 'sharp', 'borderless', 'avatar', 'description', 'languages', 'activity',
-    'contributors', 'topics', 'footer', 'milestone', 'health', 'stars', 'forks', 'commits', 'watchers', 'release',
-    'kropki', 'paski', 'siatka', 'zorza', 'gwiazdki', 'jezyki', 'opis', 'awatar', 'kontrybutorzy', 'aktywnosc',
-  ])].filter(w => w.length >= 4);
-
-  const known = w => VOCAB.includes(w) || COLOR_STEMS.some(([st]) => w.startsWith(st))
-    || MOOD_ALIASES.some(([re]) => re.test(` ${w} `)) || WORDS.some(([re]) => re.test(` ${w} `))
-    || Object.values(ELEMENT_WORDS).some(re => re.test(` ${w} `));
-  const swapped = (a, b) => a.length === b.length && [...a].some((_, i) => i < a.length - 1
-    && a.slice(0, i) + a[i + 1] + a[i] + a.slice(i + 2) === b);
-
-  function fixTypos(s, notes) {
-    return s.replace(/[a-z]{4,}/g, w => {
-      if (STOP.has(w) || known(w)) return w;
-      if (w.length === 4) {
-        const v = VOCAB.find(x => swapped(w, x));
-        if (v) notes.push(`${w} → ${v}`);
-        return v || w;
-      }
-      const max = w.length >= 8 ? 2 : 1;
-      let best = null, bestD = max + 1;
-      for (const v of VOCAB) {
-        if (v[0] !== w[0]) continue;
-        const d = levenshtein(w, v);
-        if (d < bestD) { best = v; bestD = d; }
-      }
-      if (best) { notes.push(`${w} → ${best}`); return best; }
-      return w;
-    });
-  }
-
-  function hslHex(h, s, l) {
-    s /= 100; l /= 100;
-    const k = n => (n + h / 30) % 12;
-    const a = s * Math.min(l, 1 - l);
-    const f = n => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))));
-    return `#${[f(0), f(8), f(4)].map(v => v.toString(16).padStart(2, '0')).join('')}`.toUpperCase();
-  }
-  function hashText(t) {
-    let h = 2166136261;
-    for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return h >>> 0;
-  }
-  /** A complete, good-looking style generated from any text (same text → same look). */
-  function styleFromSeed(seed) {
-    const pick = (list, shift) => list[(seed >>> shift) % list.length];
-    const hue = seed % 360;
-    const theme = pick(['dark', 'midnight', 'dark', 'light'], 3);
-    return {
-      theme,
-      accent: hslHex(hue, 80, theme === 'light' ? 50 : 62),
-      accent2: hslHex((hue + pick([40, 60, 150, 200, 300], 7)) % 360, 78, theme === 'light' ? 52 : 64),
-      bg: pick(['gradient', 'mesh', 'aurora', 'grid', 'dots', 'stripes'], 11),
-      light: pick(['corner', 'top', 'left', 'spotlight', 'neon'], 15),
-      glow: 45 + ((seed >>> 19) % 50),
-      font: pick(['sans', 'sans', 'mono', 'serif'], 23),
-      bgColors: null,
-    };
-  }
-
-  /**
-   * Parse a style description. Never fails: returns
-   * { changes, show, hide, only, showAll, fewer, reset, understood, fixes, generated }.
-   */
-  function parseStyle(text) {
-    const original = String(text || '').trim();
-    let raw = original;
-    for (const [emo, word] of EMOJI) raw = raw.split(emo).join(` ${word} `);
-    const fixes = [];
-    let s = ` ${fixTypos(fold(raw).replace(/[^a-z0-9#&%\s,.;:!?'"-]/g, ' ').replace(/\s+/g, ' '), fixes)} `;
-    const changes = {};
-    const understood = [];
-    const show = [];
-    const hide = [];
-    let only = null, showAll = false, fewer = false, reset = false, m;
-
-    // Title in quotes or after "title:" — taken from the original text so accents stay.
-    const t = original.match(/["„“”«»]([^"„“”«»]{1,60})["„“”«»]/)
-      || original.match(/(?:title|tytuł|tytul|napis|nazwa|name)\s*[:=-]\s*([^,;\n]{1,60})/i);
-    if (t && t[1].trim()) {
-      changes.title = t[1].trim();
-      understood.push(`title “${changes.title}”`);
-      s = s.replace(fold(t[0]).replace(/[^a-z0-9#&%\s,.;:!?'"-]/g, ' '), ' ');
-    }
-
-    if (/\b(reset|domysln\w*|od nowa|start over|default)\b/.test(s)) { reset = true; understood.push('start from default'); }
-    if (/\b(random|losow\w*|surprise( me)?|zaskocz\w*|cokolwiek|anything|whatever)\b/.test(s)) {
-      Object.assign(changes, styleFromSeed(Math.floor(Math.random() * 2 ** 32)));
-      understood.push('random look');
-    }
-
-    // Moods (canonical names and aliases), applied in the order they appear.
-    const moodHits = [];
-    for (const mood of Object.keys(MOODS)) {
-      const i = s.search(new RegExp(`\\b${mood}\\b`));
-      if (i >= 0) moodHits.push([i, mood]);
-    }
-    for (const [re, mood] of MOOD_ALIASES) {
-      const i = s.search(re);
-      if (i >= 0 && !moodHits.some(h => h[1] === mood)) moodHits.push([i, mood]);
-    }
-    moodHits.sort((a, b) => a[0] - b[0]).forEach(([, mood]) => {
-      Object.assign(changes, MOODS[mood]);
-      understood.push(`${mood} mood`);
-    });
-
-    // Colours, with optional "dark"/"light" in front ("dark blue", "jasnoróżowy", "ciemno zielony").
-    const colors = [];
-    const tokens = s.trim().split(/[\s,.;:!?]+/);
-    const shadeUsed = []; // [phrase, replacement]
-    tokens.forEach((tok, i) => {
-      let w = tok, shade = 0;
-      const pre = w.match(/^(ciemno|jasno)-?(.+)$/);
-      if (pre) { shade = pre[1] === 'ciemno' ? -1 : 1; w = pre[2]; shadeUsed.push([tok, w]); }
-      let hex = null;
-      if (/^#[0-9a-f]{6}$/.test(w)) hex = w.toUpperCase();
-      else if (/^#[0-9a-f]{3}$/.test(w)) hex = `#${w.slice(1).split('').map(c => c + c).join('')}`.toUpperCase();
-      else if (COLOR_WORDS[w]) hex = COLOR_WORDS[w];
-      else if (COLOR_WORDS[w.replace(/(ish|y)$/, '')]) hex = COLOR_WORDS[w.replace(/(ish|y)$/, '')];
-      else { const st = COLOR_STEMS.find(([stem]) => w.startsWith(stem)); if (st) hex = st[1]; }
-      if (!hex) return;
-      const prev = tokens[i - 1] || '';
-      if (!shade && DARKER.test(prev)) { shade = -1; shadeUsed.push([`${prev} ${tok}`, tok]); }
-      if (!shade && LIGHTER.test(prev)) { shade = 1; shadeUsed.push([`${prev} ${tok}`, tok]); }
-      if (shade < 0) hex = mix(hex, '#000000', 0.35);
-      if (shade > 0) hex = mix(hex, '#FFFFFF', 0.4);
-      colors.push(hex.toUpperCase());
-    });
-    // "dark blue" is a colour, not a request for the dark theme.
-    shadeUsed.forEach(([phrase, repl]) => { s = s.replace(phrase, repl); });
-
-    for (const [re, change, label] of WORDS) {
-      if (re.test(s)) {
-        Object.assign(changes, change);
-        if (!understood.includes(`${label} mood`)) understood.push(label);
-      }
-    }
-
-    if (colors[0]) { changes.accent = colors[0]; understood.push(`accent ${colors[0]}`); }
-    if (colors[1]) { changes.accent2 = colors[1]; understood.push(`second color ${colors[1]}`); }
-    else if (colors[0] && !moodHits.length) changes.accent2 = '';
-
-    // Glow strength as a number: "glow 40", "40% glow", "poświata 70".
-    const g = s.match(/\b(\d{1,3}) ?%? ?(glow|light|swiatl\w*|poswiat\w*|blask\w*)\b/) || s.match(/\b(glow|swiatl\w*|poswiat\w*|blask\w*) ?(\d{1,3})\b/);
-    if (g) {
-      const v = Math.min(100, Number(g[1]) || Number(g[2]));
-      if (!Number.isNaN(v)) {
-        changes.glow = v;
-        const i = understood.indexOf('strong glow');
-        if (i >= 0) understood.splice(i, 1);
-        understood.push(`glow ${v}%`);
-      }
-    }
-
-    // Elements: "no avatar", "bez opisu", "only stars and forks", "show health", or just naming them.
-    const matchEls = phrase => Object.entries(ELEMENT_WORDS).filter(([, re]) => re.test(` ${phrase} `)).map(([k]) => k);
-    const neg = /\b(no|without|hide|remove|bez|ukryj\w*|usun\w*|schowaj\w*|wywal\w*)\s+([a-z ]{2,60}?)(?=,|\.|;|\b(?:but|with|show|add|ale|z|dodaj|pokaz)\b|$)/g;
-    while ((m = neg.exec(s))) matchEls(m[2]).forEach(k => { if (!hide.includes(k)) { hide.push(k); understood.push(`hide ${ELEMENT_LABEL(k)}`); } });
-    const onlyM = s.match(/\b(only|just|tylko|jedynie|wylacznie)\s+([a-z ]{2,80}?)(?=,|\.|;|$)/);
-    if (onlyM) {
-      const els = matchEls(onlyM[2]);
-      if (els.length) { only = els; understood.push(`only ${els.map(ELEMENT_LABEL).join(', ')}`); }
-    }
-    if (!only) {
-      Object.entries(ELEMENT_WORDS).forEach(([k, re]) => {
-        if (re.test(s) && !hide.includes(k) && !show.includes(k)) { show.push(k); understood.push(`show ${ELEMENT_LABEL(k)}`); }
-      });
-    }
-    if (/\b(everything|all (stats|elements|the things)|wszystk\w*|max\w*|more stats|wiecej)\b/.test(s)) { showAll = true; understood.push('show everything'); }
-    if (/\b(less|fewer|mniej|less stuff|ograniczon\w*|essentials?|najwazniejsz\w*)\b/.test(s)) { fewer = true; understood.push('fewer elements'); }
-
-    // Nothing recognised: build a unique look from the words themselves.
-    let generated = false;
-    if (!understood.length && original) {
-      Object.assign(changes, styleFromSeed(hashText(fold(original))));
-      generated = true;
-      understood.push('unique look made from your words');
-    }
-
-    return { changes, show, hide, only, showAll, fewer, reset, understood: [...new Set(understood)], fixes, generated };
-  }
-
-  const FEWER = ['avatar', 'description', 'stars', 'forks', 'languages', 'footer'];
-
-  function applyStyle(o, parsed) {
-    const base = parsed.reset ? defaultOptions() : o;
-    const next = { ...base, show: new Set(base.show) };
-    const c = { ...parsed.changes };
-    if (c.bgColors === undefined && (c.theme || c.bg)) next.bgColors = null;
-    Object.assign(next, c);
-    if (parsed.showAll) ELEMENTS.forEach(e => next.show.add(e.key));
-    if (parsed.fewer) next.show = new Set(FEWER);
-    if (parsed.only) next.show = new Set(parsed.only);
-    parsed.show.forEach(k => next.show.add(k));
-    parsed.hide.forEach(k => next.show.delete(k));
-    return next;
-  }
-
-  const STYLE_PRESETS = ['Cyberpunk', 'Synthwave', 'Terminal', 'Ocean', 'Sunset', 'Forest', 'Luxury', 'Pastel', 'Paper', 'Blueprint', 'Minimal', 'Galaxy'];
 
   /* =========================================================
      Images & exports
@@ -1420,8 +1188,8 @@ ${bg.edge}
   }
 
   return {
-    ELEMENTS, THEMES, ACCENTS, TEMPLATES, BACKGROUNDS, LIGHTS, FONTS, TEMPLATE_SUPPORT, STYLE_PRESETS,
-    defaultOptions, optionsToParams, optionsFromParams, parseStyle, applyStyle,
+    ELEMENTS, THEMES, ACCENTS, TEMPLATES, BACKGROUNDS, LIGHTS, FONTS, TEMPLATE_SUPPORT, PRESETS, CHOICES,
+    defaultOptions, optionsToParams, optionsFromParams, applyPreset,
     render, inlineImages, downloadSvg, downloadPng, shiftHue,
   };
 })();
